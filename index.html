@@ -278,15 +278,49 @@ table.gantt{border-collapse:collapse;min-width:100%;}
 
 <!-- NEW PROJECT -->
 <div class="overlay" id="m-new-project">
-  <div class="modal" style="max-width:430px;">
-    <h3>Nuevo proyecto</h3>
-    <div class="msub">Configura los detalles básicos</div>
-    <div class="field"><label>Nombre</label><input id="np-name" placeholder="ej. BIROB Tomo I"/></div>
-    <div class="field"><label>Descripción</label><textarea id="np-desc" placeholder="Breve descripción…"></textarea></div>
-    <div class="field"><label>Color</label><div class="color-row" id="np-colors"></div></div>
-    <div class="mactions">
-      <button class="btn btn-ghost" onclick="closeModal('m-new-project')">Cancelar</button>
-      <button class="btn btn-primary" onclick="createProject()">Crear</button>
+  <div class="modal" style="max-width:450px;">
+    <!-- Tab switcher -->
+    <div style="display:flex;gap:2px;background:var(--surface2);border-radius:10px;padding:3px;margin-bottom:20px;">
+      <button id="tab-crear" onclick="switchNewTab('crear')"
+        style="flex:1;padding:7px;border:none;border-radius:8px;background:var(--accent);color:#fff;font-family:'DM Sans',sans-serif;font-size:.83rem;font-weight:500;cursor:pointer;transition:background .15s;">
+        ＋ Crear proyecto
+      </button>
+      <button id="tab-unirse" onclick="switchNewTab('unirse')"
+        style="flex:1;padding:7px;border:none;border-radius:8px;background:transparent;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:.83rem;font-weight:500;cursor:pointer;transition:background .15s;">
+        🔗 Unirse a uno
+      </button>
+    </div>
+
+    <!-- Crear -->
+    <div id="panel-crear">
+      <h3 style="margin-bottom:4px;">Nuevo proyecto</h3>
+      <div class="msub">Configura los detalles básicos</div>
+      <div class="field"><label>Nombre</label><input id="np-name" placeholder="ej. BIROB Tomo I"/></div>
+      <div class="field"><label>Descripción</label><textarea id="np-desc" placeholder="Breve descripción…"></textarea></div>
+      <div class="field"><label>Color</label><div class="color-row" id="np-colors"></div></div>
+      <div class="mactions">
+        <button class="btn btn-ghost" onclick="closeModal('m-new-project')">Cancelar</button>
+        <button class="btn btn-primary" onclick="createProject()">Crear</button>
+      </div>
+    </div>
+
+    <!-- Unirse -->
+    <div id="panel-unirse" style="display:none;">
+      <h3 style="margin-bottom:4px;">Unirse a un proyecto</h3>
+      <div class="msub">Pegá el <b>Drive File ID</b> que te compartió el dueño del proyecto.</div>
+      <div class="field">
+        <label>Drive File ID</label>
+        <input id="join-file-id" placeholder="ej. 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"
+               style="font-family:monospace;font-size:.8rem;"/>
+        <div style="font-size:.72rem;color:var(--text3);margin-top:4px;">
+          El ID está en el Calendar invite o se lo podés pedir al dueño desde el panel "Invitar".
+        </div>
+      </div>
+      <div id="join-status" style="font-size:.8rem;color:var(--text2);min-height:18px;margin-bottom:10px;"></div>
+      <div class="mactions">
+        <button class="btn btn-ghost" onclick="closeModal('m-new-project')">Cancelar</button>
+        <button class="btn btn-primary" onclick="joinProject()">Unirme al proyecto</button>
+      </div>
     </div>
   </div>
 </div>
@@ -417,29 +451,38 @@ table.gantt{border-collapse:collapse;min-width:100%;}
 
 <!-- INVITE COLLABORATOR -->
 <div class="overlay" id="m-invite">
-  <div class="modal" style="max-width:460px;">
+  <div class="modal" style="max-width:470px;">
     <h3>👤 Invitar colaborador</h3>
-    <div class="msub">El colaborador recibirá el enlace por Calendar y el archivo Drive se compartirá automáticamente con él.</div>
+    <div class="msub">Compartí el ID del archivo para que la persona pueda unirse desde "Unirse a un proyecto".</div>
 
-    <!-- Shareable link -->
-    <div style="margin-bottom:14px;">
-      <div style="font-size:.78rem;color:var(--text2);font-weight:500;margin-bottom:5px;">Enlace directo al proyecto</div>
-      <div style="display:flex;gap:7px;">
-        <input id="collab-share-link" readonly style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text2);font-family:'DM Sans',sans-serif;font-size:.78rem;padding:7px 10px;outline:none;"/>
-        <button class="btn btn-ghost btn-sm" onclick="copyShareLink()" title="Copiar enlace">⎘ Copiar</button>
+    <!-- Drive File ID to share -->
+    <div style="margin-bottom:16px;">
+      <div style="font-size:.78rem;color:var(--text2);font-weight:500;margin-bottom:5px;">Drive File ID del proyecto</div>
+      <div style="display:flex;gap:7px;align-items:center;">
+        <input id="collab-file-id" readonly
+          style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);
+                 color:var(--text);font-family:monospace;font-size:.78rem;padding:7px 11px;outline:none;"/>
+        <button class="btn btn-ghost btn-sm" onclick="copyFileId()">⎘ Copiar</button>
+      </div>
+      <div style="font-size:.72rem;color:var(--text3);margin-top:4px;">
+        Mandá este ID al colaborador. Al pegarlo en "Unirse a un proyecto", el archivo se agregará a su Drive automáticamente.
       </div>
     </div>
 
-    <div id="collab-list"></div>
-    <div class="field" style="margin-top:8px;">
-      <label>Invitar por correo (Google Calendar + Drive)</label>
+    <!-- Collaborators list -->
+    <div id="collab-list" style="margin-bottom:10px;"></div>
+
+    <!-- Invite by email -->
+    <div class="field">
+      <label>Invitar por correo (comparte en Drive + Calendar)</label>
       <div style="display:flex;gap:8px;">
-        <input id="inv-email" type="email" placeholder="colega@gmail.com" style="flex:1;" onkeydown="if(event.key==='Enter')addCollaborator()"/>
+        <input id="inv-email" type="email" placeholder="colega@gmail.com" style="flex:1;"
+               onkeydown="if(event.key==='Enter')addCollaborator()"/>
         <button class="btn btn-primary btn-sm" onclick="addCollaborator()">Invitar</button>
       </div>
     </div>
-    <div style="font-size:.74rem;color:var(--text3);margin-top:6px;line-height:1.5;">
-      Al invitar: (1) se guarda el proyecto en tu Drive bajo la carpeta <b>PlanOS/</b>, (2) se comparte ese archivo con el colaborador, (3) reciben una invitación por Calendar con el enlace.
+    <div style="font-size:.73rem;color:var(--text3);line-height:1.5;margin-top:2px;">
+      Al invitar por correo: se comparte el archivo Drive con esa persona y reciben el ID por Google Calendar.
     </div>
     <div class="mactions"><button class="btn btn-ghost" onclick="closeModal('m-invite')">Cerrar</button></div>
   </div>
@@ -448,26 +491,26 @@ table.gantt{border-collapse:collapse;min-width:100%;}
 <div id="toast"><span id="t-icon">✓</span> <span id="t-msg"></span></div>
 
 <script>
-// ══════════════════════════════
+// ---
 // CONSTANTS
-// ══════════════════════════════
+// ---
 const CLIENT_ID='147141081595-mtlv4l70drmlb50aae44bso40kr02n9o.apps.googleusercontent.com';
 const SCOPES='https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive.file profile email';
 const PC=['#5b7fff','#3dcc78','#f5c542','#e86cad','#26d4b8','#f5894a','#9b72ff','#f06060'];
 const PROJ_C=['#5b7fff','#3dcc78','#26d4b8','#9b72ff','#f5894a','#e86cad','#f5c542'];
 
-// ══════════════════════════════
+// ---
 // STATE
-// ══════════════════════════════
+// ---
 let S={user:null,token:null,projects:[],active:null,driveFolderId:null,selColor:PROJ_C[0],pendingCSV:null,editWeekIdx:null,taskCtx:null,addTaskCtx:null};
 
-// ══════════════════════════════
+// ---
 // AUTH
-// ══════════════════════════════
+// ---
 function handleLogin(){
   google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:SCOPES,
     callback:async r=>{
-      if(r.error){toast('Error: '+r.error,'❌');return;}
+      if(r.error){toast('Error: '+r.error,'[err]');return;}
       S.token=r.access_token;
       await fetchUser();
       await loadDrive();
@@ -484,14 +527,24 @@ async function fetchUser(){
   </div>`;
   const h=new Date().getHours(),g=h<12?'Buenos días':h<18?'Buenas tardes':'Buenas noches';
   const n=(S.user.given_name||S.user.name||'').split(' ')[0];
-  document.getElementById('welcome-title').textContent=`${g}, ${n} 👋`;
+  document.getElementById('welcome-title').textContent=`${g}, ${n} `;
 }
 
-// ══════════════════════════════
+// ---
 // SCREENS
-// ══════════════════════════════
+// ---
 function showHome(){
   show('splash',false);show('home',true);show('project-view',false);S.active=null;renderProjects();
+  // Auto-open join tab if arriving from an invite link
+  if(S._pendingFid){
+    const fid=S._pendingFid;
+    S._pendingFid=null;
+    setTimeout(()=>{
+      openModal('m-new-project');
+      switchNewTab('unirse');
+      document.getElementById('join-file-id').value=fid;
+    },400);
+  }
 }
 function showProject(id){
   const p=proj(id);if(!p)return;
@@ -502,9 +555,9 @@ function showProject(id){
 }
 function show(id,v){document.getElementById(id).style.display=v?'block':'none';}
 
-// ══════════════════════════════
+// ---
 // PROJECTS LIST
-// ══════════════════════════════
+// ---
 function renderProjects(){
   const g=document.getElementById('projects-grid');g.innerHTML='';
   S.projects.forEach(p=>{
@@ -515,25 +568,25 @@ function renderProjects(){
     const c=document.createElement('div');
     c.className='project-card';c.style.setProperty('--card-color',p.color||PC[0]);
     c.innerHTML=`<div class="pc-top"><div class="pc-name">${esc(p.name)}</div>
-      <button class="pc-menu-btn" onclick="event.stopPropagation();openEditProjectModal('${p.id}')">⋯</button></div>
-      <div class="pc-meta">${p.weeks.length} sem · ${total} tareas · <b style="color:${p.color}">${pct}%</b></div>
+      <button class="pc-menu-btn" onclick="event.stopPropagation();openEditProjectModal('${p.id}')">...</button></div>
+      <div class="pc-meta">${p.weeks.length} sem . ${total} tareas . <b style="color:${p.color}">${pct}%</b></div>
       <div class="pc-prog"><div class="pc-prog-fill" style="width:${pct}%;background:${p.color}"></div></div>
       <div class="pc-footer">
         <div class="avatars">${ppl.slice(0,5).map(n=>`<div class="av" style="background:${pCol(n)};color:#fff">${ini(n)}</div>`).join('')}</div>
-        <div style="font-size:.72rem;color:var(--text3)">${fmtS(p.weeks[0]?.date||'')} → ${fmtS(p.weeks[p.weeks.length-1]?.date||'')}</div>
+        <div style="font-size:.72rem;color:var(--text3)">${fmtS(p.weeks[0]?.date||'')} -> ${fmtS(p.weeks[p.weeks.length-1]?.date||'')}</div>
       </div>`;
     c.onclick=e=>{if(e.target.classList.contains('pc-menu-btn'))return;showProject(p.id);};
     g.appendChild(c);
   });
   const nc=document.createElement('div');nc.className='add-proj-card';
-  nc.innerHTML='<span style="font-size:1.3rem">＋</span> Nuevo proyecto';
+  nc.innerHTML='<span style="font-size:1.3rem">+</span> Nuevo proyecto';
   nc.onclick=()=>openModal('m-new-project');
   g.appendChild(nc);
 }
 
-// ══════════════════════════════
+// ---
 // COLOR PICKER
-// ══════════════════════════════
+// ---
 function buildColors(containerId,target){
   const c=document.getElementById(containerId);
   c.innerHTML=PROJ_C.map(col=>`<div class="col-swatch${S.selColor===col?' sel':''}" style="background:${col}" onclick="pickCol(this,'${col}','${target}')"></div>`).join('');
@@ -544,9 +597,9 @@ function pickCol(el,col,target){
   el.classList.add('sel');
 }
 
-// ══════════════════════════════
+// ---
 // MODAL HELPERS
-// ══════════════════════════════
+// ---
 function openModal(id){
   if(id==='m-new-project'){S.selColor=PROJ_C[S.projects.length%PROJ_C.length];buildColors('np-colors','np');}
   document.getElementById(id).classList.add('open');
@@ -554,15 +607,15 @@ function openModal(id){
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');}));
 
-// ══════════════════════════════
+// ---
 // CREATE / EDIT / DELETE PROJECT
-// ══════════════════════════════
+// ---
 function createProject(){
-  const name=document.getElementById('np-name').value.trim();if(!name){toast('Ingresa un nombre','⚠️');return;}
+  const name=document.getElementById('np-name').value.trim();if(!name){toast('Ingresa un nombre','[!]');return;}
   const p={id:uid(),name,desc:document.getElementById('np-desc').value.trim(),color:S.selColor,members:{},collaborators:[],weeks:[],createdAt:new Date().toISOString()};
   S.projects.push(p);persist();closeModal('m-new-project');
   document.getElementById('np-name').value='';document.getElementById('np-desc').value='';
-  showProject(p.id);toast('Proyecto creado ✅');
+  showProject(p.id);toast('Proyecto creado [ok]');
 }
 let _eProjId=null;
 function openEditProjectModal(id){
@@ -578,27 +631,27 @@ function saveEditProject(){
   persist();closeModal('m-edit-project');
   document.getElementById('pv-title').textContent=p.name;
   document.getElementById('pv-sub').textContent=p.desc||'';
-  renderProjects();toast('Proyecto actualizado ✅');
+  renderProjects();toast('Proyecto actualizado [ok]');
 }
 function deleteProject(){
   const p=getActive();if(!p)return;
   if(!confirm(`¿Eliminar "${p.name}"? No se puede deshacer.`))return;
-  S.projects=S.projects.filter(x=>x.id!==p.id);persist();showHome();toast('Proyecto eliminado 🗑');
+  S.projects=S.projects.filter(x=>x.id!==p.id);persist();showHome();toast('Proyecto eliminado [del]');
 }
 
-// ══════════════════════════════
+// ---
 // CSV IMPORT
-// ══════════════════════════════
+// ---
 function handleDrop(e){e.preventDefault();document.getElementById('file-drop').classList.remove('drag');const f=e.dataTransfer.files[0];if(f)handleCSVFile(f);}
 function handleCSVFile(file){
   if(!file)return;
   const r=new FileReader();
   r.onload=e=>{
     S.pendingCSV=parseCSV(e.target.result);
-    document.getElementById('csv-summary').textContent=`Personas: ${S.pendingCSV.people.join(', ')} · ${S.pendingCSV.weeks.length} semanas`;
+    document.getElementById('csv-summary').textContent=`Personas: ${S.pendingCSV.people.join(', ')} . ${S.pendingCSV.weeks.length} semanas`;
     document.getElementById('csv-preview').style.display='block';
     document.getElementById('imp-btn').style.display='inline-flex';
-    toast(`CSV: ${S.pendingCSV.weeks.length} semanas, ${S.pendingCSV.people.length} personas`,'📄');
+    toast(`CSV: ${S.pendingCSV.weeks.length} semanas, ${S.pendingCSV.people.length} personas`,'[csv]');
   };
   r.readAsText(file);
 }
@@ -632,19 +685,19 @@ function importCSV(){
   S.pendingCSV=null;persist();closeModal('m-import');
   document.getElementById('csv-preview').style.display='none';
   document.getElementById('imp-btn').style.display='none';
-  renderGantt(p);toast('CSV importado ✅');
+  renderGantt(p);toast('CSV importado [ok]');
 }
 
-// ══════════════════════════════
+// ---
 // WEEKS
-// ══════════════════════════════
+// ---
 function addWeek(){
   const p=getActive();if(!p)return;
   const last=p.weeks[p.weeks.length-1];
   let d='';
   if(last?.date){const dt=toD(last.date);dt.setDate(dt.getDate()+7);d=fromD(dt);}
   p.weeks.push({id:uid(),week:`Semana ${p.weeks.length}`,date:d,tasks:{}});
-  persist();renderGantt(p);toast('Semana añadida ✅');
+  persist();renderGantt(p);toast('Semana añadida [ok]');
 }
 function openEditWeek(idx){
   S.editWeekIdx=idx;const p=getActive();if(!p)return;
@@ -670,18 +723,18 @@ function saveWeek(){
       }
     }
   }
-  persist();closeModal('m-edit-week');renderGantt(p);toast('Semana actualizada ✅');
+  persist();closeModal('m-edit-week');renderGantt(p);toast('Semana actualizada [ok]');
 }
 function deleteWeek(){
   const p=getActive();if(!p)return;
   const w=p.weeks[S.editWeekIdx];
   if(!confirm(`¿Eliminar "${w.week}"?`))return;
-  p.weeks.splice(S.editWeekIdx,1);persist();closeModal('m-edit-week');renderGantt(p);toast('Semana eliminada 🗑');
+  p.weeks.splice(S.editWeekIdx,1);persist();closeModal('m-edit-week');renderGantt(p);toast('Semana eliminada [del]');
 }
 
-// ══════════════════════════════
+// ---
 // GANTT
-// ══════════════════════════════
+// ---
 function renderGantt(p){
   const ppl=people(p),weeks=p.weeks,now=new Date();
   // Stats
@@ -713,7 +766,7 @@ function renderGantt(p){
     const today=Math.abs(toD(w.date)-now)<7*86400000;
     const th=document.createElement('th');
     th.className='wh'+(past?' past':'')+(today?' today':'');
-    th.innerHTML=`<div class="wh-label">${esc(w.week)}</div><div class="wh-date">${fmtS(w.date)}</div><span class="wh-edit">✏</span>`;
+    th.innerHTML=`<div class="wh-label">${esc(w.week)}</div><div class="wh-date">${fmtS(w.date)}</div><span class="wh-edit">[edit]</span>`;
     th.onclick=()=>openEditWeek(wi);tr.appendChild(th);
   });
   thead.appendChild(tr);tbl.appendChild(thead);
@@ -737,7 +790,7 @@ function renderGantt(p){
         block.className='task-block'+(task.subtasks?.length?' has-sub':'')+(past?' done':'');
         block.style.setProperty('--tb',color);
         block.title=task.label;
-        block.innerHTML=`<span style="overflow:hidden;text-overflow:ellipsis;flex:1">${past?'✓ ':''}${esc(task.label)}</span>`;
+        block.innerHTML=`<span style="overflow:hidden;text-overflow:ellipsis;flex:1">${past?'[ok] ':''}${esc(task.label)}</span>`;
         block.onclick=()=>openTaskModal(person,wi,w,color,email,p);
         td.appendChild(block);
       } else {
@@ -756,23 +809,23 @@ function people(p){
   return[...s];
 }
 
-// ══════════════════════════════
+// ---
 // TASK MODAL
-// ══════════════════════════════
+// ---
 function openTaskModal(person,weekIdx,w,color,email,p){
   S.taskCtx={person,weekIdx};
   const task=w.tasks[person];
   const past=toD(w.date)<new Date();
   document.getElementById('tm-title').textContent=task.label;
-  document.getElementById('tm-meta').textContent=`${person}  ·  ${w.week}`;
+  document.getElementById('tm-meta').textContent=`${person}  .  ${w.week}`;
   document.getElementById('tm-status').innerHTML=past
-    ?'<span class="status-badge s-done">✓ Completado</span>'
-    :'<span class="status-badge s-pending">⏳ Pendiente</span>';
+    ?'<span class="status-badge s-done">[ok] Completado</span>'
+    :'<span class="status-badge s-pending">[wait] Pendiente</span>';
   document.getElementById('tm-info').innerHTML=`
     <div class="info-cell"><div class="ic-label">Semana</div><div class="ic-val">${esc(w.week)}</div></div>
     <div class="info-cell"><div class="ic-label">Fecha</div><div class="ic-val">${fmtF(w.date)}</div></div>
     <div class="info-cell"><div class="ic-label">Responsable</div><div class="ic-val">${esc(person)}</div></div>
-    <div class="info-cell"><div class="ic-label">Correo</div><div class="ic-val" style="font-size:.76rem">${esc(email)||'—'}</div></div>`;
+    <div class="info-cell"><div class="ic-label">Correo</div><div class="ic-val" style="font-size:.76rem">${esc(email)||'-'}</div></div>`;
   document.getElementById('tm-task-inp').value=task.label;
   renderSubs(task);
   document.getElementById('tm-cal-btn').onclick=()=>scheduleOne({person,task:task.label,week:w.week,date:w.date,email});
@@ -784,7 +837,7 @@ function renderSubs(task){
     <div class="sub-item">
       <input type="checkbox" ${s.done?'checked':''} onchange="toggleSub('${s.id}')"/>
       <span class="sub-text${s.done?' done-txt':''}">${esc(s.text)}</span>
-      <button class="sub-del" onclick="deleteSub('${s.id}')">✕</button>
+      <button class="sub-del" onclick="deleteSub('${s.id}')">x</button>
     </div>`).join('');
 }
 function addSubtask(){
@@ -814,36 +867,36 @@ function saveTaskEdit(){
   const p=getActive();if(!p)return;
   const{person,weekIdx}=S.taskCtx;
   const lbl=document.getElementById('tm-task-inp').value.trim();
-  if(!lbl){toast('La tarea no puede estar vacía','⚠️');return;}
+  if(!lbl){toast('La tarea no puede estar vacía','[!]');return;}
   p.weeks[weekIdx].tasks[person].label=lbl;
-  persist();renderGantt(p);closeModal('m-task');toast('Tarea guardada ✅');
+  persist();renderGantt(p);closeModal('m-task');toast('Tarea guardada [ok]');
 }
 function deleteTask(){
   const p=getActive();if(!p)return;
   const{person,weekIdx}=S.taskCtx;
   if(!confirm('¿Eliminar esta tarea?'))return;
   delete p.weeks[weekIdx].tasks[person];
-  persist();renderGantt(p);closeModal('m-task');toast('Tarea eliminada 🗑');
+  persist();renderGantt(p);closeModal('m-task');toast('Tarea eliminada [del]');
 }
 // Add task (empty cell)
 function openAddTask(person,weekIdx,w){
   S.addTaskCtx={person,weekIdx};
-  document.getElementById('at-meta').textContent=`${person}  ·  ${w.week}  ·  ${fmtS(w.date)}`;
+  document.getElementById('at-meta').textContent=`${person}  .  ${w.week}  .  ${fmtS(w.date)}`;
   document.getElementById('at-task').value='';
   openModal('m-add-task');
   setTimeout(()=>document.getElementById('at-task').focus(),100);
 }
 function saveNewTask(){
-  const txt=document.getElementById('at-task').value.trim();if(!txt){toast('Ingresa una descripción','⚠️');return;}
+  const txt=document.getElementById('at-task').value.trim();if(!txt){toast('Ingresa una descripción','[!]');return;}
   const p=getActive();if(!p)return;
   const{person,weekIdx}=S.addTaskCtx;
   p.weeks[weekIdx].tasks[person]={label:txt,subtasks:[]};
-  persist();renderGantt(p);closeModal('m-add-task');toast('Tarea añadida ✅');
+  persist();renderGantt(p);closeModal('m-add-task');toast('Tarea añadida [ok]');
 }
 
-// ══════════════════════════════
+// ---
 // SETTINGS
-// ══════════════════════════════
+// ---
 function openSettings(){
   const p=getActive();if(!p)return;
   people(p).forEach(n=>{if(p.members[n]===undefined)p.members[n]='';});
@@ -857,7 +910,7 @@ function renderMembers(p){
         <div class="m-name">${esc(n)}</div>
         <input class="m-email-inp" type="email" value="${esc(e)}" placeholder="correo@ejemplo.com" onchange="updEmail('${escA(n)}',this.value)"/>
       </div>
-      <button class="m-del" onclick="delMember('${escA(n)}')">✕</button>
+      <button class="m-del" onclick="delMember('${escA(n)}')">x</button>
     </div>`).join('');
 }
 function updEmail(name,email){const p=getActive();if(p)p.members[name]=email;}
@@ -865,68 +918,178 @@ function delMember(name){const p=getActive();if(!p)return;delete p.members[name]
 function addMember(){
   const name=document.getElementById('add-m-name').value.trim();
   const email=document.getElementById('add-m-email').value.trim();
-  if(!name){toast('Ingresa un nombre','⚠️');return;}
+  if(!name){toast('Ingresa un nombre','[!]');return;}
   const p=getActive();if(!p)return;
   p.members[name]=email;renderMembers(p);
   document.getElementById('add-m-name').value='';document.getElementById('add-m-email').value='';
 }
-function saveSettings(){persist();closeModal('m-settings');const p=getActive();if(p)renderGantt(p);toast('Equipo guardado ✅');}
+function saveSettings(){persist();closeModal('m-settings');const p=getActive();if(p)renderGantt(p);toast('Equipo guardado [ok]');}
 
-// ══════════════════════════════
+// ---
+// NEW PROJECT  tab switcher + join
+// ---
+function switchNewTab(tab){
+  document.getElementById('panel-crear').style.display  = tab==='crear'  ? 'block' : 'none';
+  document.getElementById('panel-unirse').style.display = tab==='unirse' ? 'block' : 'none';
+  document.getElementById('tab-crear').style.background  = tab==='crear'  ? 'var(--accent)' : 'transparent';
+  document.getElementById('tab-crear').style.color       = tab==='crear'  ? '#fff'          : 'var(--text2)';
+  document.getElementById('tab-unirse').style.background = tab==='unirse' ? 'var(--accent)' : 'transparent';
+  document.getElementById('tab-unirse').style.color      = tab==='unirse' ? '#fff'          : 'var(--text2)';
+  // Pre-fill from URL ?project= file id
+  if(tab==='unirse'){
+    const fid=new URLSearchParams(location.search).get('fid')||'';
+    if(fid) document.getElementById('join-file-id').value=fid;
+  }
+}
+
+async function joinProject(){
+  if(!S.token){toast('Inicia sesión primero','[!]');return;}
+  const fid=document.getElementById('join-file-id').value.trim();
+  if(!fid){toast('Pegá el Drive File ID','[!]');return;}
+  const statusEl=document.getElementById('join-status');
+  statusEl.textContent='Verificando archivo...';
+
+  try{
+    // 1. Read the file from Drive (it must already be shared with this user)
+    const r=await fetch(`https://www.googleapis.com/drive/v3/files/${fid}?alt=media`,
+      {headers:{Authorization:'Bearer '+S.token}}).catch(()=>null);
+
+    if(!r||!r.ok){
+      statusEl.style.color='var(--red)';
+      statusEl.textContent='No se pudo acceder al archivo. Verificá que el dueño lo haya compartido contigo en Drive.';
+      return;
+    }
+    const bk=await r.json();
+    const p=bk.project;
+    if(!p||!p.id){
+      statusEl.style.color='var(--red)';
+      statusEl.textContent='El archivo no parece ser un proyecto PlanOS válido.';
+      return;
+    }
+
+    // 2. Ensure PlanOS folder exists in THIS user's Drive
+    statusEl.style.color='var(--text2)';
+    statusEl.textContent='Creando carpeta PlanOS en tu Drive...';
+    const folderId=await ensureFolder();
+
+    // 3. Create a shortcut to the shared file inside the user's PlanOS/ folder
+    statusEl.textContent='Creando acceso directo en tu Drive...';
+    if(folderId){
+      // Check if shortcut already exists
+      const chk=await fetch(
+        `https://www.googleapis.com/drive/v3/files?q='${folderId}' in parents and name='shortcut_${p.id}.json' and trashed=false&fields=files(id)`,
+        {headers:{Authorization:'Bearer '+S.token}}).catch(()=>null);
+      const chkd=chk?.ok?await chk.json():{files:[]};
+      if(!chkd.files?.length){
+        // Create shortcut
+        await fetch('https://www.googleapis.com/drive/v3/files',{
+          method:'POST',
+          headers:{Authorization:'Bearer '+S.token,'Content-Type':'application/json'},
+          body:JSON.stringify({
+            name:`shortcut_${p.id}.json`,
+            mimeType:'application/vnd.google-apps.shortcut',
+            parents:[folderId],
+            shortcutDetails:{targetId:fid}
+          })
+        }).catch(e=>console.warn('Shortcut creation failed (non-blocking):',e));
+      }
+    }
+
+    // 4. Store project locally; mark driveFileId so future saves update the owner's file
+    p.driveFileId=fid;
+    migrate_one(p);
+    const existing=S.projects.findIndex(x=>x.id===p.id);
+    if(existing>=0) S.projects[existing]=p;
+    else S.projects.push(p);
+    saveLocal();
+
+    statusEl.style.color='var(--green)';
+    statusEl.textContent=`[ok] Proyecto "${p.name}" agregado correctamente.`;
+    setTimeout(()=>{closeModal('m-new-project');showProject(p.id);},800);
+    toast(`Proyecto "${p.name}" cargado desde Drive [drive]`);
+
+  }catch(e){
+    console.error(e);
+    statusEl.style.color='var(--red)';
+    statusEl.textContent='Error inesperado: '+e.message;
+  }
+}
+
+function migrate_one(p){
+  if(!p.collaborators)p.collaborators=[];
+  if(!p.driveFileId)p.driveFileId=null;
+  p.weeks?.forEach(w=>{
+    Object.keys(w.tasks||{}).forEach(k=>{
+      if(typeof w.tasks[k]==='string')w.tasks[k]={label:w.tasks[k],subtasks:[]};
+      if(!w.tasks[k].subtasks)w.tasks[k].subtasks=[];
+    });
+  });
+}
+
+// ---
 // COLLABORATORS
-// ══════════════════════════════
+// ---
 const APP_URL='https://promero-ucenfotec.github.io/Gestion-Proyectos-/';
 
 function openInviteModal(){
   const p=getActive();if(!p)return;
   renderCollabs(p);openModal('m-invite');
 }
+
 function renderCollabs(p){
+  // Show Drive File ID  save first if not yet saved
+  document.getElementById('collab-file-id').value=p.driveFileId||'(guarda primero con [drive] - recargá si ya lo hiciste)';
   const c=p.collaborators||[];
-  const link=`${APP_URL}?project=${p.id}`;
-  document.getElementById('collab-share-link').value=link;
   document.getElementById('collab-list').innerHTML=c.length
     ?c.map(e=>`<div class="collab-chip">
         <div class="av" style="background:var(--accent2);color:#fff;font-size:.58rem;">${e.slice(0,2).toUpperCase()}</div>
         <span style="flex:1">${esc(e)}</span>
-        <span style="font-size:.68rem;color:var(--text3);margin-right:4px;">${p.driveFileId?'✓ Drive':'sin Drive'}</span>
-        <button class="collab-del" onclick="removeCollab('${escA(e)}')">✕</button>
+        <button class="collab-del" onclick="removeCollab('${escA(e)}')">x</button>
       </div>`).join('')
     :'<div style="color:var(--text3);font-size:.82rem;margin-bottom:8px;">Sin colaboradores aún.</div>';
 }
+
+function copyFileId(){
+  const v=document.getElementById('collab-file-id').value;
+  if(!v||v.startsWith('(')) {toast('Guardá el proyecto en Drive primero','[!]');return;}
+  navigator.clipboard.writeText(v).then(()=>toast('File ID copiado [ok]')).catch(()=>{
+    document.getElementById('collab-file-id').select();document.execCommand('copy');toast('File ID copiado [ok]');
+  });
+}
+
 async function addCollaborator(){
   const email=document.getElementById('inv-email').value.trim();
-  if(!email||!email.includes('@')){toast('Correo inválido','⚠️');return;}
+  if(!email||!email.includes('@')){toast('Correo inválido','[!]');return;}
   const p=getActive();if(!p)return;
   if(!p.collaborators)p.collaborators=[];
-  if(p.collaborators.includes(email)){toast('Ya está en la lista','⚠️');return;}
+  if(p.collaborators.includes(email)){toast('Ya está en la lista','[!]');return;}
+
+  // 1. Ensure project is in Drive first
+  toast('Guardando en Drive...','[drive]');
+  await saveProjectToDrive(p);
+  if(!p.driveFileId){toast('No se pudo guardar en Drive','[err]');return;}
+
+  // 2. Share Drive file with writer access
+  const shared=await shareDriveFile(p.driveFileId,email);
+
+  // 3. Send Calendar invite with the File ID prominently
+  await sendCalendarInvite(email,p);
+
   p.collaborators.push(email);
   document.getElementById('inv-email').value='';
-
-  // 1. Save project to Drive first (ensure file exists)
-  toast('Guardando proyecto en Drive…','☁️');
-  await saveProjectToDrive(p);
-
-  // 2. Share the Drive file with the collaborator
-  if(p.driveFileId&&S.token){
-    const ok=await shareDriveFile(p.driveFileId,email);
-    if(ok)toast(`Archivo Drive compartido con ${email} ✅`,'☁️');
-    else toast('No se pudo compartir en Drive (continúa con Calendar)','⚠️');
-  }
-
-  // 3. Send Calendar invite with the deep link
   renderCollabs(p);
   await persist();
-  if(S.token) await sendCalendarInvite(email,p);
-  toast(`Invitación enviada a ${email} 📨`);
+  toast(shared?`Drive compartido + Calendar enviado a ${email} [ok]`:`Calendar enviado a ${email} (Drive falló - mandá el ID manualmente) [!]`);
 }
+
 function removeCollab(email){
   const p=getActive();if(!p)return;
   p.collaborators=(p.collaborators||[]).filter(e=>e!==email);
   renderCollabs(p);persist();
 }
+
 async function shareDriveFile(fileId,email){
-  if(!S.token)return false;
+  if(!S.token||!fileId)return false;
   try{
     const r=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions?sendNotificationEmail=false`,{
       method:'POST',
@@ -936,38 +1099,41 @@ async function shareDriveFile(fileId,email){
     return r.ok;
   }catch(e){console.warn('Share failed',e);return false;}
 }
+
 async function sendCalendarInvite(email,p){
-  const link=`${APP_URL}?project=${p.id}`;
+  const joinLink=`${APP_URL}?fid=${p.driveFileId}`;
+  const body=
+    `Has sido invitado a colaborar en el proyecto "${p.name}" en PlanOS.\n\n`+
+    ` Drive File ID: ${p.driveFileId}\n\n`+
+    `Pasos para unirte:\n`+
+    `1. Abrí: ${APP_URL}\n`+
+    `2. Iniciá sesión con Google\n`+
+    `3. Hacé clic en "Nuevo proyecto" -> pestaña "Unirse a uno"\n`+
+    `4. Pegá el Drive File ID de arriba\n\n`+
+    `O usá este enlace directo: ${joinLink}`;
   const event={
-    summary:`📌 Invitación: proyecto "${p.name}" en PlanOS`,
-    description:`Has sido invitado a colaborar en el proyecto "${p.name}".\n\nAbre el cronograma aquí:\n${link}\n\nNecesitás iniciar sesión con tu cuenta de Google para sincronizar los cambios.`,
+    summary:`[pin] Unirte al proyecto "${p.name}" - PlanOS`,
+    description:body,
     start:{dateTime:new Date().toISOString(),timeZone:'America/Costa_Rica'},
     end:{dateTime:new Date(Date.now()+1800000).toISOString(),timeZone:'America/Costa_Rica'},
     attendees:[{email}],
-    description:`📋 Proyecto: ${p.name}\n🔗 Abrir cronograma: ${link}\n\nPara editar, inicia sesión con Google en la app.`,
   };
   try{
     await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=all',
       {method:'POST',headers:{Authorization:'Bearer '+S.token,'Content-Type':'application/json'},body:JSON.stringify(event)});
   }catch(e){console.warn('Calendar invite failed',e);}
 }
-function copyShareLink(){
-  const v=document.getElementById('collab-share-link').value;
-  navigator.clipboard.writeText(v).then(()=>toast('Enlace copiado ✅')).catch(()=>{
-    document.getElementById('collab-share-link').select();document.execCommand('copy');toast('Enlace copiado ✅');
-  });
-}
 
-// ══════════════════════════════
+// ---
 // GOOGLE CALENDAR
-// ══════════════════════════════
+// ---
 async function scheduleOne(t){
-  if(!S.token){toast('Inicia sesión primero','⚠️');return;}
+  if(!S.token){toast('Inicia sesión primero','[!]');return;}
   const email=t.email||(S.user?.email||'');
-  if(!email){toast('Sin correo asignado. Configura el equipo primero.','⚠️');return;}
-  const iso=toISO(t.date);if(!iso){toast('Fecha inválida','⚠️');return;}
+  if(!email){toast('Sin correo asignado. Configura el equipo primero.','[!]');return;}
+  const iso=toISO(t.date);if(!iso){toast('Fecha inválida','[!]');return;}
   const event={
-    summary:`📋 ${t.task} — ${t.person}`,
+    summary:`[task] ${t.task} - ${t.person}`,
     description:`Tarea: ${t.task}\nResponsable: ${t.person}\nProyecto: ${getActive()?.name||''}`,
     start:{date:iso},end:{date:iso},
     attendees:[{email}],
@@ -975,14 +1141,14 @@ async function scheduleOne(t){
   };
   const r=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=all',
     {method:'POST',headers:{Authorization:'Bearer '+S.token,'Content-Type':'application/json'},body:JSON.stringify(event)}).catch(()=>null);
-  if(r?.ok){toast(`Agendado: ${t.task} 📅`);closeModal('m-task');}
-  else toast('Error al agendar','❌');
+  if(r?.ok){toast(`Agendado: ${t.task} [cal]`);closeModal('m-task');}
+  else toast('Error al agendar','[err]');
 }
 async function scheduleAll(){
-  if(!S.token){toast('Inicia sesión primero','⚠️');return;}
+  if(!S.token){toast('Inicia sesión primero','[!]');return;}
   const p=getActive();if(!p)return;
   const ppl=people(p);let count=0;
-  toast('Agendando todas las tareas… ⏳');
+  toast('Agendando todas las tareas... [wait]');
   for(const w of p.weeks){
     for(const person of ppl){
       const task=w.tasks[person];if(!task?.label)continue;
@@ -991,12 +1157,12 @@ async function scheduleAll(){
       count++;await sleep(280);
     }
   }
-  toast(`${count} tareas agendadas ✅`);
+  toast(`${count} tareas agendadas [ok]`);
 }
 
-// ══════════════════════════════
-// DRIVE — carpeta PlanOS/ + un archivo por proyecto
-// ══════════════════════════════
+// ---
+// DRIVE  carpeta PlanOS/ + un archivo por proyecto
+// ---
 
 // persist: saves locally + updates Drive file for the active project (or all)
 async function persist(){
@@ -1018,18 +1184,7 @@ function loadLocal(){
     migrate();
   }catch(e){}
 }
-function migrate(){
-  S.projects.forEach(p=>{
-    if(!p.collaborators)p.collaborators=[];
-    if(!p.driveFileId)p.driveFileId=null;
-    p.weeks.forEach(w=>{
-      Object.keys(w.tasks).forEach(k=>{
-        if(typeof w.tasks[k]==='string')w.tasks[k]={label:w.tasks[k],subtasks:[]};
-        if(!w.tasks[k].subtasks)w.tasks[k].subtasks=[];
-      });
-    });
-  });
-}
+function migrate(){S.projects.forEach(p=>migrate_one(p));}
 
 // Ensure PlanOS folder exists; returns folderId
 async function ensureFolder(){
@@ -1098,7 +1253,7 @@ async function loadDrive(){
           }
         }
         migrate();saveLocal();
-        if(loaded)toast(`${loaded} proyectos desde Drive ☁️`);
+        if(loaded)toast(`${loaded} proyectos desde Drive [drive]`);
       }
     }
 
@@ -1108,7 +1263,7 @@ async function loadDrive(){
   }catch(e){console.warn('Drive load failed',e);}
 }
 
-// Deep-link: ?project=ID — load that project file from Drive (shared with this user)
+// Deep-link: ?project=ID  load that project file from Drive (shared with this user)
 async function loadSharedProject(){
   const params=new URLSearchParams(location.search);
   const pid=params.get('project');
@@ -1130,26 +1285,26 @@ async function loadSharedProject(){
         if(existing>=0)S.projects[existing]=bk.project;
         else S.projects.push(bk.project);
         migrate();saveLocal();
-        toast(`Proyecto compartido cargado: ${bk.project.name} ☁️`);
+        toast(`Proyecto compartido cargado: ${bk.project.name} [drive]`);
         // Auto-open if it's the only param
         setTimeout(()=>showProject(bk.project.id),600);
       }
     } else {
-      toast('No se encontró el proyecto compartido. Pedí al dueño que lo comparta en Drive.','⚠️');
+      toast('No se encontró el proyecto compartido. Pedí al dueño que lo comparta en Drive.','[!]');
     }
   }catch(e){console.warn('Shared project load failed',e);}
 }
 
-// ══════════════════════════════
+// ---
 // UTILS
-// ══════════════════════════════
+// ---
 function uid(){return Math.random().toString(36).slice(2,10);}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 function getActive(){return S.projects.find(p=>p.id===S.active);}
 function proj(id){return S.projects.find(p=>p.id===id);}
-function ini(n){return n.split(/[\s\-–]+/).map(w=>w[0]||'').join('').toUpperCase().slice(0,2);}
+function ini(n){return n.split(/[\s\-]+/).map(w=>w[0]||'').join('').toUpperCase().slice(0,2);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function escA(s){return String(s||'').replace(/'/g,"\\'")}
+function escA(s){return String(s||'').replace(/'/g,"\\'");}
 function pCol(n){let h=0;for(const c of n)h=(h*31+c.charCodeAt(0))%PC.length;return PC[h];}
 function toD(str){
   if(!str)return new Date(0);
@@ -1162,7 +1317,7 @@ function fromD(d){return`${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}`;}
 function toISO(str){const p=str?.split('/');return p?.length===3?`${p[2]}-${p[0].padStart(2,'0')}-${p[1].padStart(2,'0')}`:null;}
 function toInputDate(str){const iso=toISO(str);return iso||'';}
 function fmtS(d){
-  if(!d)return'—';
+  if(!d)return'-';
   try{return toD(d).toLocaleDateString('es-CR',{day:'numeric',month:'short'});}catch(e){return d;}
 }
 function fmtF(d){
@@ -1183,15 +1338,18 @@ document.addEventListener('visibilitychange',()=>{
   }
 });
 
-// ══════════════════════════════
+// ---
 // BOOT
-// ══════════════════════════════
+// ---
 loadLocal();
-// If there's a ?project= param and user is not logged in yet, show login splash with note
+// If there's a ?fid= in URL: tell the user to log in, then auto-open join tab
 (()=>{
-  const pid=new URLSearchParams(location.search).get('project');
-  if(pid&&!S.user){
-    document.querySelector('#splash p').textContent='Inicia sesión con Google para acceder al proyecto compartido contigo.';
+  const fid=new URLSearchParams(location.search).get('fid');
+  if(fid){
+    document.querySelector('#splash p').textContent=
+      'Inicia sesión con Google para unirte al proyecto compartido contigo.';
+    // After login we auto-open the join tab  handled inside showHome()
+    S._pendingFid=fid;
   }
 })();
 </script>
