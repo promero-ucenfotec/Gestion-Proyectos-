@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planificador de Proyectos</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,300;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0f14;
+    --surface: #161820;
+    --surface2: #1e2030;
+    --border: #2a2d3e;
+    --accent: #6c8cff;
+    --accent2: #a78bfa;
+    --green: #4ade80;
+    --yellow: #fbbf24;
+    --red: #f87171;
+    --orange: #fb923c;
+    --teal: #2dd4bf;
+    --pink: #f472b6;
+    --text: #e2e4f0;
+    --text2: #8b8fa8;
+    --text3: #555870;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+
+  /* ── TOP BAR ── */
+  #topbar {
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 28px;
+    background: rgba(14,15,20,0.85);
+    backdrop-filter: blur(18px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-family: 'Fraunces', serif;
+    font-size: 1.3rem;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .logo span { color: var(--accent); }
+
+  #user-pill {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 50px;
+    padding: 6px 14px 6px 8px;
+    font-size: .82rem;
+    cursor: pointer;
+    transition: border-color .2s;
+  }
+  #user-pill:hover { border-color: var(--accent); }
+  #user-pill img { width:26px; height:26px; border-radius:50%; }
+  #user-pill .name { color: var(--text); font-weight: 500; }
+  #user-pill .email { color: var(--text2); font-size: .75rem; }
+
+  #login-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    padding: 9px 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity .2s, transform .15s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  #login-btn:hover { opacity: .88; transform: translateY(-1px); }
+
+  /* ── MAIN LAYOUT ── */
+  #app { position: relative; z-index: 1; }
+
+  /* ── SPLASH / LOGIN ── */
+  #splash {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: calc(100vh - 62px);
+    gap: 24px; padding: 40px;
+    text-align: center;
+  }
+  #splash h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(2.4rem, 6vw, 4.5rem);
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #e2e4f0 30%, #6c8cff 70%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  #splash p {
+    color: var(--text2); font-size: 1.05rem; max-width: 520px; line-height: 1.6;
+  }
+  #splash .features {
+    display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; margin-top: 8px;
+  }
+  #splash .feat-chip {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 50px; padding: 7px 16px; font-size: .82rem; color: var(--text2);
+    display: flex; align-items: center; gap: 6px;
+  }
+  #splash .feat-chip .dot { width:7px; height:7px; border-radius:50%; background: var(--accent); }
+
+  /* ── HOME ── */
+  #home { display: none; padding: 32px 28px; max-width: 1400px; margin: 0 auto; }
+
+  .section-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.4rem;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .section-sub { color: var(--text2); font-size: .85rem; margin-bottom: 20px; }
+
+  /* Projects grid */
+  #projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+
+  .project-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    cursor: pointer;
+    transition: border-color .2s, transform .15s, box-shadow .2s;
+    position: relative; overflow: hidden;
+  }
+  .project-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--card-accent, var(--accent));
+    border-radius: 3px 3px 0 0;
+  }
+  .project-card:hover {
+    border-color: var(--card-accent, var(--accent));
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(108,140,255,.12);
+  }
+  .project-card .pc-name {
+    font-weight: 600; font-size: 1rem; margin-bottom: 6px;
+  }
+  .project-card .pc-meta { color: var(--text2); font-size: .8rem; margin-bottom: 12px; }
+  .project-card .pc-progress {
+    height: 4px; background: var(--border); border-radius: 4px; overflow: hidden;
+  }
+  .project-card .pc-progress-fill {
+    height: 100%; background: var(--card-accent, var(--accent));
+    border-radius: 4px; transition: width .4s ease;
+  }
+  .project-card .pc-members {
+    display: flex; margin-top: 12px; gap: -4px;
+  }
+  .avatar {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--surface2); border: 2px solid var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    font-size: .65rem; font-weight: 600; color: var(--text2);
+    margin-right: -6px;
+  }
+
+  .new-project-card {
+    background: transparent;
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    cursor: pointer;
+    transition: border-color .2s;
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px; color: var(--text3); font-size: .9rem;
+    min-height: 140px;
+  }
+  .new-project-card:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── GANTT VIEW ── */
+  #project-view { display: none; padding: 24px 28px; max-width: 100%; }
+
+  .pv-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+  }
+  .pv-back {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 50px; padding: 7px 16px;
+    cursor: pointer; font-size: .85rem; color: var(--text2);
+    transition: color .2s, border-color .2s;
+  }
+  .pv-back:hover { color: var(--text); border-color: var(--accent); }
+  .pv-actions { display: flex; gap: 10px; }
+  
+  .btn {
+    display: flex; align-items: center; gap: 7px;
+    padding: 8px 18px; border-radius: 50px;
+    font-family: 'DM Sans', sans-serif; font-size: .85rem; font-weight: 500;
+    cursor: pointer; border: none; transition: opacity .2s, transform .15s;
+  }
+  .btn:hover { opacity: .85; transform: translateY(-1px); }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-ghost { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+  .btn-green { background: var(--green); color: #0a0a0a; }
+  .btn-teal { background: var(--teal); color: #0a0a0a; }
+
+  /* GANTT */
+  .gantt-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  .gantt-scroll { overflow-x: auto; }
+
+  table.gantt {
+    border-collapse: collapse;
+    min-width: 100%;
+  }
+
+  .gantt thead th {
+    background: var(--surface2);
+    padding: 10px 14px;
+    font-size: .75rem; font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase; letter-spacing: .05em;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    text-align: left;
+  }
+
+  .gantt thead .week-header {
+    text-align: center;
+    min-width: 110px;
+  }
+
+  .gantt tbody tr {
+    border-bottom: 1px solid rgba(42,45,62,.6);
+    transition: background .15s;
+  }
+  .gantt tbody tr:hover { background: rgba(108,140,255,.04); }
+  .gantt tbody tr:last-child { border-bottom: none; }
+
+  .gantt .person-cell {
+    padding: 10px 16px;
+    font-size: .82rem; font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    background: var(--surface);
+    position: sticky; left: 0;
+    border-right: 1px solid var(--border);
+    z-index: 2;
+  }
+  .gantt .person-cell .p-email { font-size: .72rem; color: var(--text3); font-weight: 400; }
+
+  .gantt .task-cell {
+    padding: 6px 8px;
+    text-align: center;
+    vertical-align: middle;
+    min-width: 110px;
+  }
+
+  .task-block {
+    background: var(--tb-color, var(--accent));
+    color: #fff;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: .75rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+    cursor: pointer;
+    transition: opacity .2s, transform .15s;
+    text-align: left;
+    position: relative;
+  }
+  .task-block:hover { opacity: .85; transform: scale(1.03); }
+
+  .task-block.empty { background: transparent; cursor: default; }
+
+  /* WEEK ROW (header row) */
+  .week-label-row th {
+    background: rgba(108,140,255,.06);
+    padding: 8px 8px;
+    font-size: .78rem;
+    color: var(--accent);
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,.7); backdrop-filter: blur(6px);
+    align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    width: 100%; max-width: 480px;
+    max-height: 85vh; overflow-y: auto;
+    animation: modalIn .2s ease;
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(.95) translateY(10px); }
+    to   { opacity: 1; transform: scale(1)   translateY(0); }
+  }
+
+  .modal h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.2rem; margin-bottom: 6px;
+  }
+  .modal .modal-sub { color: var(--text2); font-size: .83rem; margin-bottom: 20px; }
+  .modal label { display: block; font-size: .8rem; color: var(--text2); margin-bottom: 5px; font-weight: 500; }
+  .modal input, .modal textarea, .modal select {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: .88rem;
+    padding: 9px 12px; margin-bottom: 14px;
+    transition: border-color .2s;
+  }
+  .modal input:focus, .modal textarea:focus, .modal select:focus {
+    outline: none; border-color: var(--accent);
+  }
+  .modal textarea { resize: vertical; min-height: 70px; }
+  .modal .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+
+  /* Member list in settings */
+  .member-row {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .member-row .avatar-big {
+    width:34px; height:34px; border-radius:50%;
+    background: var(--border); display:flex; align-items:center; justify-content:center;
+    font-size:.8rem; font-weight:600; color:var(--text2);
+    flex-shrink:0;
+  }
+  .member-row .m-info { flex:1; }
+  .member-row .m-name { font-size:.85rem; font-weight:500; }
+  .member-row .m-email { font-size:.75rem; color:var(--text2); }
+  .member-row .m-del {
+    background:none; border:none; color:var(--text3); cursor:pointer; font-size:1rem;
+    transition:color .2s; padding:4px;
+  }
+  .member-row .m-del:hover { color:var(--red); }
+
+  /* File drop */
+  .file-drop {
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 28px; text-align: center;
+    cursor: pointer; transition: border-color .2s, background .2s;
+    color: var(--text2); font-size: .88rem;
+  }
+  .file-drop:hover, .file-drop.drag { border-color: var(--accent); background: rgba(108,140,255,.05); }
+  .file-drop .fd-icon { font-size: 2rem; margin-bottom: 8px; }
+
+  /* Toast */
+  #toast {
+    position: fixed; bottom: 28px; right: 28px; z-index: 999;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 20px;
+    font-size: .85rem; color: var(--text);
+    opacity: 0; transform: translateY(10px);
+    transition: opacity .25s, transform .25s;
+    pointer-events: none; max-width: 340px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast .t-icon { font-size: 1.1rem; }
+
+  /* Pill badge */
+  .badge {
+    display: inline-flex; align-items: center;
+    background: rgba(108,140,255,.12); color: var(--accent);
+    border-radius: 50px; padding: 2px 10px; font-size: .75rem; font-weight: 600;
+  }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── LEGEND ── */
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .legend-item {
+    display: flex; align-items: center; gap: 6px; font-size: .78rem; color: var(--text2);
+  }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+  /* Progress summary */
+  .progress-bar-wrap {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; margin-bottom: 20px;
+    display: flex; gap: 24px; flex-wrap: wrap; align-items: center;
+  }
+  .progress-stat { flex: 1; min-width: 120px; }
+  .progress-stat .ps-num {
+    font-family: 'Fraunces', serif; font-size: 1.6rem; color: var(--text); letter-spacing: -0.02em;
+  }
+  .progress-stat .ps-label { color: var(--text2); font-size: .78rem; margin-top: 2px; }
+  .big-progress { flex: 3; min-width: 200px; }
+  .big-progress-bar { height: 8px; background: var(--border); border-radius: 8px; overflow: hidden; }
+  .big-progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 8px; transition: width .5s ease; }
+
+  .divider { height:1px; background: var(--border); margin: 24px 0; }
+
+  /* Calendar schedule icon */
+  .cal-badge { background: rgba(45,212,191,.1); color: var(--teal); border: 1px solid rgba(45,212,191,.2); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 600px) {
+    #topbar { padding: 12px 16px; }
+    #home, #project-view { padding: 20px 16px; }
+    .gantt .person-cell { min-width: 100px; padding: 8px 10px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="logo">Plan<span>OS</span></div>
+  <div id="auth-area">
+    <button id="login-btn" onclick="handleLogin()">
+      <svg width="16" height="16" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#fff"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#fff"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#fff"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#fff"/></svg>
+      Continuar con Google
+    </button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+  <!-- SPLASH -->
+  <div id="splash">
+    <h1>Cronogramas que<br><em>realmente funcionan</em></h1>
+    <p>Importa un CSV, visualiza el Gantt de tu equipo, programa eventos en Google Calendar y respalda todo en Drive.</p>
+    <div class="features">
+      <div class="feat-chip"><span class="dot"></span>Gantt interactivo</div>
+      <div class="feat-chip"><span class="dot" style="background:var(--teal)"></span>Google Calendar</div>
+      <div class="feat-chip"><span class="dot" style="background:var(--green)"></span>Drive Backup</div>
+      <div class="feat-chip"><span class="dot" style="background:var(--accent2)"></span>Multi-proyecto</div>
+    </div>
+    <button id="login-btn2" class="btn btn-primary" style="padding:14px 32px;font-size:1rem;" onclick="handleLogin()">
+      Iniciar sesión con Google
+    </button>
+  </div>
+
+  <!-- HOME -->
+  <div id="home">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;">
+      <div>
+        <div class="section-title" id="welcome-title">Buenos días 👋</div>
+        <div class="section-sub">Tus proyectos activos</div>
+      </div>
+      <button class="btn btn-ghost" onclick="openImportModal()">
+        ↑ Importar CSV
+      </button>
+    </div>
+    <div id="projects-grid">
+      <div class="new-project-card" onclick="openNewProjectModal()">
+        <span style="font-size:1.4rem">＋</span> Nuevo proyecto
+      </div>
+    </div>
+  </div>
+
+  <!-- PROJECT GANTT VIEW -->
+  <div id="project-view">
+    <div class="pv-header">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <div class="pv-back" onclick="showHome()">← Proyectos</div>
+        <div>
+          <h2 id="pv-title" style="font-family:'Fraunces',serif;font-size:1.4rem;letter-spacing:-.02em;"></h2>
+          <div id="pv-meta" style="color:var(--text2);font-size:.82rem;margin-top:2px;"></div>
+        </div>
+      </div>
+      <div class="pv-actions">
+        <button class="btn btn-ghost" onclick="openSettings()">⚙ Configurar equipo</button>
+        <button class="btn btn-teal" onclick="scheduleAllToCalendar()">📅 Agendar en Calendar</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="progress-bar-wrap" id="pv-stats"></div>
+
+    <!-- Legend -->
+    <div class="legend" id="gantt-legend"></div>
+
+    <!-- Gantt -->
+    <div class="gantt-wrap">
+      <div class="gantt-scroll">
+        <table class="gantt" id="gantt-table"></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODALS ── -->
+
+<!-- New Project Modal -->
+<div class="modal-overlay" id="modal-new-project">
+  <div class="modal">
+    <h3>Nuevo proyecto</h3>
+    <div class="modal-sub">Crea un proyecto en blanco o importa desde CSV</div>
+    <label>Nombre del proyecto</label>
+    <input id="np-name" type="text" placeholder="ej. BIROB Tomo I" />
+    <label>Descripción (opcional)</label>
+    <textarea id="np-desc" placeholder="Breve descripción del proyecto..."></textarea>
+    <label>Color de acento</label>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+      <div class="color-opt" data-color="#6c8cff" onclick="selectColor(this)" style="width:28px;height:28px;border-radius:50%;background:#6c8cff;cursor:pointer;border:2px solid white;"></div>
+      <div class="color-opt" data-color="#4ade80" onclick="selectColor(this)" style="width:28px;height:28px;border-radius:50%;background:#4ade80;cursor:pointer;"></div>
+      <div class="color-opt" data-color="#fbbf24" onclick="selectColor(this)" style="width:28px;height:28px;border-radius:50%;background:#fbbf24;cursor:pointer;"></div>
+      <div class="color-opt" data-color="#f472b6" onclick="selectColor(this)" style="width:28px;height:28px;border-radius:50%;background:#f472b6;cursor:pointer;"></div>
+      <div class="color-opt" data-color="#2dd4bf" onclick="selectColor(this)" style="width:28px;height:28px;border-radius:50%;background:#2dd4bf;cursor:pointer;"></div>
+      <div class="color-opt" data-color="#fb923c" onclick="selectColor(this)" style="width:28px;height:28px;border-radius:50%;background:#fb923c;cursor:pointer;"></div>
+      <div class="color-opt" data-color="#a78bfa" onclick="selectColor(this)" style="width:28px;height:28px;border-radius:50%;background:#a78bfa;cursor:pointer;"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-new-project')">Cancelar</button>
+      <button class="btn btn-primary" onclick="createProject()">Crear proyecto</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import CSV Modal -->
+<div class="modal-overlay" id="modal-import">
+  <div class="modal">
+    <h3>Importar CSV</h3>
+    <div class="modal-sub">El CSV debe tener: Fecha Entrega, Semana, y una columna por persona</div>
+    <div class="file-drop" id="file-drop" onclick="document.getElementById('csv-input').click()"
+         ondragover="event.preventDefault();this.classList.add('drag')"
+         ondragleave="this.classList.remove('drag')"
+         ondrop="handleDrop(event)">
+      <div class="fd-icon">📄</div>
+      <div>Arrastra tu CSV aquí o <span style="color:var(--accent)">haz clic para elegir</span></div>
+      <div style="font-size:.75rem;color:var(--text3);margin-top:6px;">Guía_de_Trabajo_-_General.csv</div>
+    </div>
+    <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="handleCSVFile(this.files[0])">
+    <div id="csv-preview" style="display:none;margin-top:14px;">
+      <label>Nombre del proyecto</label>
+      <input id="imp-name" type="text" placeholder="Nombre del proyecto" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-import')">Cancelar</button>
+      <button class="btn btn-primary" id="imp-btn" style="display:none" onclick="importProject()">Importar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="modal-settings">
+  <div class="modal" style="max-width:520px;">
+    <h3>⚙ Configurar equipo</h3>
+    <div class="modal-sub">Asigna correos a cada persona para agendar en Google Calendar</div>
+    <div id="members-list"></div>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <input id="add-member-name" type="text" placeholder="Nombre (como en CSV)" style="margin-bottom:0;flex:1;" />
+      <input id="add-member-email" type="email" placeholder="correo@ejemplo.com" style="margin-bottom:0;flex:2;" />
+      <button class="btn btn-primary" onclick="addMember()" style="padding:8px 14px;white-space:nowrap;">+ Añadir</button>
+    </div>
+    <div class="divider"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-settings')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveSettings()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Task Detail Modal -->
+<div class="modal-overlay" id="modal-task">
+  <div class="modal">
+    <h3 id="task-modal-title">Tarea</h3>
+    <div id="task-modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-task')">Cerrar</button>
+      <button class="btn btn-teal" id="task-cal-btn">📅 Agendar en Calendar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"><span class="t-icon">✓</span><span id="toast-msg"></span></div>
+
+<script>
+// ══════════════════════════════════════════
+//  CONFIG
+// ══════════════════════════════════════════
+const CLIENT_ID = '147141081595-mtlv4l70drmlb50aae44bso40kr02n9o.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive.file profile email';
+
+const PERSON_COLORS = ['#6c8cff','#4ade80','#fbbf24','#f472b6','#2dd4bf','#fb923c','#a78bfa','#f87171'];
+const PROJECT_COLORS = ['#6c8cff','#4ade80','#fbbf24','#2dd4bf','#a78bfa','#fb923c'];
+
+// ── STATE ──
+let state = {
+  user: null,
+  accessToken: null,
+  projects: [],       // [{id, name, desc, color, members:{name:email}, weeks:[{week,date,tasks:{person:label}}], createdAt}]
+  activeProject: null,
+  driveBackupFileId: null,
+  pendingCSV: null,
+  pendingColor: PROJECT_COLORS[0],
+};
+
+// ══════════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════════
+function handleLogin() {
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: async (resp) => {
+      if (resp.error) { toast('Error de autenticación: ' + resp.error, '❌'); return; }
+      state.accessToken = resp.access_token;
+      await fetchUserInfo();
+      await loadFromDrive();
+      showHome();
+    }
+  });
+  client.requestAccessToken();
+}
+
+async function fetchUserInfo() {
+  try {
+    const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: 'Bearer ' + state.accessToken }
+    });
+    state.user = await r.json();
+    renderTopBar();
+  } catch(e) { console.error(e); }
+}
+
+function renderTopBar() {
+  const area = document.getElementById('auth-area');
+  if (!state.user) return;
+  area.innerHTML = `
+    <div id="user-pill" onclick="confirmLogout()">
+      <img src="${state.user.picture || ''}" onerror="this.style.display='none'" />
+      <div>
+        <div class="name">${state.user.name || state.user.email}</div>
+        <div class="email">${state.user.email}</div>
+      </div>
+    </div>`;
+  // Welcome
+  const h = new Date().getHours();
+  const greet = h < 12 ? 'Buenos días' : h < 18 ? 'Buenas tardes' : 'Buenas noches';
+  const name = (state.user.given_name || state.user.name || '').split(' ')[0];
+  document.getElementById('welcome-title').textContent = `${greet}, ${name} 👋`;
+}
+
+function confirmLogout() {
+  if (confirm('¿Cerrar sesión?')) { state.user = null; state.accessToken = null; location.reload(); }
+}
+
+// ══════════════════════════════════════════
+//  SCREENS
+// ══════════════════════════════════════════
+function showHome() {
+  document.getElementById('splash').style.display = 'none';
+  document.getElementById('home').style.display = 'block';
+  document.getElementById('project-view').style.display = 'none';
+  renderProjects();
+}
+
+function showProject(id) {
+  const p = state.projects.find(x => x.id === id);
+  if (!p) return;
+  state.activeProject = id;
+  document.getElementById('home').style.display = 'none';
+  document.getElementById('project-view').style.display = 'block';
+  document.getElementById('pv-title').textContent = p.name;
+  document.getElementById('pv-meta').textContent = p.desc || '';
+  renderGantt(p);
+}
+
+// ══════════════════════════════════════════
+//  PROJECTS
+// ══════════════════════════════════════════
+function renderProjects() {
+  const grid = document.getElementById('projects-grid');
+  grid.innerHTML = '';
+  state.projects.forEach(p => {
+    const members = Object.keys(p.members || {});
+    const total = p.weeks.reduce((a, w) => a + Object.values(w.tasks).filter(t=>t).length, 0);
+    const done  = p.weeks.filter(w => new Date(w.date) < new Date()).reduce((a, w) => a + Object.values(w.tasks).filter(t=>t).length, 0);
+    const pct   = total > 0 ? Math.round(done/total*100) : 0;
+    const card  = document.createElement('div');
+    card.className = 'project-card';
+    card.style.setProperty('--card-accent', p.color || '#6c8cff');
+    card.onclick = () => showProject(p.id);
+    card.innerHTML = `
+      <div class="pc-name">${p.name}</div>
+      <div class="pc-meta">${p.weeks.length} semanas · ${total} tareas · <span class="badge" style="background:rgba(108,140,255,.1);color:${p.color}">${pct}%</span></div>
+      <div class="pc-progress"><div class="pc-progress-fill" style="width:${pct}%;background:${p.color}"></div></div>
+      <div class="pc-members">${members.slice(0,5).map(n=>`<div class="avatar" style="background:${stringColor(n)}">${initials(n)}</div>`).join('')}</div>
+    `;
+    grid.appendChild(card);
+  });
+  // New card last
+  const nc = document.createElement('div');
+  nc.className = 'new-project-card';
+  nc.innerHTML = '<span style="font-size:1.4rem">＋</span> Nuevo proyecto';
+  nc.onclick = openNewProjectModal;
+  grid.appendChild(nc);
+}
+
+// ══════════════════════════════════════════
+//  GANTT
+// ══════════════════════════════════════════
+function renderGantt(p) {
+  const people = getPersonList(p);
+  const weeks  = p.weeks;
+
+  // Stats
+  const total = weeks.reduce((a,w)=>a+Object.values(w.tasks).filter(t=>t).length,0);
+  const now = new Date();
+  const done = weeks.filter(w=>new Date(w.date)<=now).reduce((a,w)=>a+Object.values(w.tasks).filter(t=>t).length,0);
+  const remaining = total - done;
+  const pct = total > 0 ? Math.round(done/total*100) : 0;
+  document.getElementById('pv-stats').innerHTML = `
+    <div class="progress-stat"><div class="ps-num">${people.length}</div><div class="ps-label">Personas</div></div>
+    <div class="progress-stat"><div class="ps-num">${weeks.length}</div><div class="ps-label">Semanas</div></div>
+    <div class="progress-stat"><div class="ps-num">${total}</div><div class="ps-label">Tareas</div></div>
+    <div class="progress-stat"><div class="ps-num">${remaining}</div><div class="ps-label">Por completar</div></div>
+    <div class="big-progress">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+        <span style="font-size:.8rem;color:var(--text2)">Progreso general</span>
+        <span style="font-size:.8rem;font-weight:600;color:var(--text)">${pct}%</span>
+      </div>
+      <div class="big-progress-bar"><div class="big-progress-fill" style="width:${pct}%"></div></div>
+    </div>`;
+
+  // Legend
+  const legend = document.getElementById('gantt-legend');
+  legend.innerHTML = people.map((n,i)=>`
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${PERSON_COLORS[i%PERSON_COLORS.length]}"></div>
+      <span>${n}</span>
+    </div>`).join('');
+
+  // Table
+  const tbl = document.getElementById('gantt-table');
+  tbl.innerHTML = '';
+
+  // Header row 1: person column + week labels
+  const thead = document.createElement('thead');
+  let tr1 = '<tr><th style="min-width:130px;position:sticky;left:0;z-index:3;background:var(--surface2);">Persona</th>';
+  weeks.forEach(w => {
+    const isPast = new Date(w.date) < now;
+    tr1 += `<th class="week-header" style="${isPast?'opacity:.5':''}">
+      ${w.week}<br><span style="font-size:.7rem;font-weight:400;color:var(--text3)">${formatDate(w.date)}</span>
+    </th>`;
+  });
+  tr1 += '</tr>';
+  thead.innerHTML = tr1;
+  tbl.appendChild(thead);
+
+  // Body
+  const tbody = document.createElement('tbody');
+  people.forEach((person, pi) => {
+    const color = PERSON_COLORS[pi % PERSON_COLORS.length];
+    const email = (p.members || {})[person] || '';
+    const tr = document.createElement('tr');
+    let html = `<td class="person-cell">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="avatar" style="background:${color};color:#fff;border-color:var(--surface)">${initials(person)}</div>
+        <div>
+          <div>${person}</div>
+          ${email ? `<div class="p-email">${email}</div>` : '<div class="p-email" style="color:var(--text3);font-style:italic;">sin correo</div>'}
+        </div>
+      </div>
+    </td>`;
+    weeks.forEach((w, wi) => {
+      const task = w.tasks[person] || '';
+      const isPast = new Date(w.date) < now;
+      if (task) {
+        html += `<td class="task-cell">
+          <div class="task-block" style="--tb-color:${color};opacity:${isPast?'.6':'1'}"
+               onclick="openTaskModal('${escAttr(person)}','${escAttr(task)}','${escAttr(w.week)}','${escAttr(w.date)}','${escAttr(email)}','${escAttr(color)}')"
+               title="${task}">
+            ${isPast?'✓ ':''}${task}
+          </div>
+        </td>`;
+      } else {
+        html += `<td class="task-cell"><div class="task-block empty"></div></td>`;
+      }
+    });
+    tr.innerHTML = html;
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+}
+
+function getPersonList(p) {
+  const set = new Set();
+  p.weeks.forEach(w => Object.keys(w.tasks).forEach(k => set.add(k)));
+  return [...set];
+}
+
+// ══════════════════════════════════════════
+//  MODALS
+// ══════════════════════════════════════════
+function openNewProjectModal() {
+  if (!state.user) { handleLogin(); return; }
+  openModal('modal-new-project');
+}
+function openImportModal() {
+  if (!state.user) { handleLogin(); return; }
+  openModal('modal-import');
+}
+function openSettings() {
+  const p = getActive(); if (!p) return;
+  renderMembersList(p);
+  openModal('modal-settings');
+}
+
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+
+function selectColor(el) {
+  document.querySelectorAll('.color-opt').forEach(e => e.style.border='2px solid transparent');
+  el.style.border = '2px solid white';
+  state.pendingColor = el.dataset.color;
+}
+
+function createProject() {
+  const name = document.getElementById('np-name').value.trim();
+  if (!name) { toast('Ingresa un nombre', '⚠️'); return; }
+  const p = {
+    id: uid(),
+    name,
+    desc: document.getElementById('np-desc').value.trim(),
+    color: state.pendingColor,
+    members: {},
+    weeks: [],
+    createdAt: new Date().toISOString()
+  };
+  state.projects.push(p);
+  saveState();
+  closeModal('modal-new-project');
+  document.getElementById('np-name').value = '';
+  document.getElementById('np-desc').value = '';
+  showProject(p.id);
+  toast('Proyecto creado', '✅');
+}
+
+// ══════════════════════════════════════════
+//  CSV IMPORT
+// ══════════════════════════════════════════
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('file-drop').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file) handleCSVFile(file);
+}
+
+function handleCSVFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const text = e.target.result;
+    const result = parseCSV(text);
+    state.pendingCSV = result;
+    document.getElementById('imp-name').value = file.name.replace('.csv','').replace(/_/g,' ');
+    document.getElementById('csv-preview').style.display = 'block';
+    document.getElementById('imp-btn').style.display = 'inline-flex';
+    toast(`CSV cargado: ${result.weeks.length} semanas, ${result.people.length} personas`, '📄');
+  };
+  reader.readAsText(file);
+}
+
+function parseCSV(text) {
+  // Remove BOM
+  text = text.replace(/^\uFEFF/, '');
+  const lines = text.split('\n').filter(l => l.trim());
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g,''));
+  // headers[0]=Fecha, [1]=Semana, [2..]=personas
+  const people = headers.slice(2);
+  const weeks = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g,''));
+    if (!cols[0] && !cols[1]) continue;
+    const tasks = {};
+    people.forEach((p, pi) => { if (cols[pi+2]) tasks[p] = cols[pi+2]; });
+    weeks.push({ week: cols[1] || `Semana ${i}`, date: cols[0] || '', tasks });
+  }
+  return { people, weeks };
+}
+
+function importProject() {
+  if (!state.pendingCSV) return;
+  const name = document.getElementById('imp-name').value.trim() || 'Proyecto importado';
+  const color = PROJECT_COLORS[state.projects.length % PROJECT_COLORS.length];
+  const members = {};
+  state.pendingCSV.people.forEach(p => members[p] = '');
+  // If user is logged in, map first person to self
+  if (state.user) members[state.pendingCSV.people[0]] = state.user.email;
+  const p = {
+    id: uid(),
+    name, desc: '',
+    color,
+    members,
+    weeks: state.pendingCSV.weeks,
+    createdAt: new Date().toISOString()
+  };
+  state.projects.push(p);
+  state.pendingCSV = null;
+  saveState();
+  closeModal('modal-import');
+  document.getElementById('csv-preview').style.display = 'none';
+  document.getElementById('imp-btn').style.display = 'none';
+  showProject(p.id);
+  toast('Proyecto importado exitosamente', '✅');
+}
+
+// ══════════════════════════════════════════
+//  SETTINGS / MEMBERS
+// ══════════════════════════════════════════
+function renderMembersList(p) {
+  const people = getPersonList(p);
+  // Merge people from CSV with existing members
+  people.forEach(n => { if (!p.members[n]) p.members[n] = ''; });
+  const list = document.getElementById('members-list');
+  list.innerHTML = Object.entries(p.members).map(([name, email]) => `
+    <div class="member-row" id="mr-${uid()}">
+      <div class="avatar-big" style="background:${stringColor(name)};color:#fff">${initials(name)}</div>
+      <div class="m-info">
+        <div class="m-name">${name}</div>
+        <input type="email" value="${email}" placeholder="correo@ejemplo.com"
+               style="background:transparent;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:2px 0;margin-bottom:0;font-size:.8rem;color:var(--text2);"
+               onchange="updateMemberEmail('${escAttr(name)}', this.value)"
+               onfocus="this.style.borderColor='var(--accent)'"
+               onblur="this.style.borderColor='var(--border)'" />
+      </div>
+      <button class="m-del" onclick="deleteMember('${escAttr(name)}')">✕</button>
+    </div>`).join('');
+}
+
+function updateMemberEmail(name, email) {
+  const p = getActive(); if (!p) return;
+  p.members[name] = email;
+}
+
+function deleteMember(name) {
+  const p = getActive(); if (!p) return;
+  delete p.members[name];
+  renderMembersList(p);
+}
+
+function addMember() {
+  const name  = document.getElementById('add-member-name').value.trim();
+  const email = document.getElementById('add-member-email').value.trim();
+  if (!name) { toast('Ingresa un nombre', '⚠️'); return; }
+  const p = getActive(); if (!p) return;
+  p.members[name] = email;
+  renderMembersList(p);
+  document.getElementById('add-member-name').value = '';
+  document.getElementById('add-member-email').value = '';
+}
+
+function saveSettings() {
+  saveState();
+  closeModal('modal-settings');
+  const p = getActive(); if (p) renderGantt(p);
+  toast('Configuración guardada', '✅');
+}
+
+// ══════════════════════════════════════════
+//  TASK MODAL
+// ══════════════════════════════════════════
+let _currentTask = null;
+function openTaskModal(person, task, week, date, email, color) {
+  _currentTask = { person, task, week, date, email, color };
+  document.getElementById('task-modal-title').textContent = task;
+  const isPast = new Date(date) < new Date();
+  document.getElementById('task-modal-body').innerHTML = `
+    <div style="display:grid;gap:10px;margin-bottom:16px;">
+      <div style="display:flex;gap:12px;align-items:center;">
+        <div class="avatar" style="background:${color};color:#fff;width:34px;height:34px;font-size:.85rem;">${initials(person)}</div>
+        <div>
+          <div style="font-weight:600;">${person}</div>
+          <div style="font-size:.78rem;color:var(--text2)">${email || 'Sin correo asignado'}</div>
+        </div>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:12px;display:flex;gap:16px;">
+        <div><div style="font-size:.72rem;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;">Semana</div>
+          <div style="font-weight:500;margin-top:2px;">${week}</div></div>
+        <div><div style="font-size:.72rem;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;">Fecha entrega</div>
+          <div style="font-weight:500;margin-top:2px;">${formatDateFull(date)}</div></div>
+        <div><div style="font-size:.72rem;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;">Estado</div>
+          <div style="font-weight:500;margin-top:2px;color:${isPast?'var(--green)':'var(--yellow)'}">
+            ${isPast?'✓ Completado':'⏳ Pendiente'}</div></div>
+      </div>
+    </div>`;
+  document.getElementById('task-cal-btn').onclick = () => scheduleTask(_currentTask);
+  openModal('modal-task');
+}
+
+// ══════════════════════════════════════════
+//  GOOGLE CALENDAR
+// ══════════════════════════════════════════
+async function scheduleTask(t) {
+  if (!state.accessToken) { toast('Inicia sesión primero', '⚠️'); return; }
+  const emails = t.email ? [t.email] : (state.user ? [state.user.email] : []);
+  if (!emails.length) { toast('Sin correo asignado', '⚠️'); return; }
+  
+  const date = t.date ? t.date.trim() : null;
+  if (!date) { toast('Sin fecha definida', '⚠️'); return; }
+  
+  // Parse date MM/DD/YYYY
+  const parts = date.split('/');
+  let startDate;
+  if (parts.length === 3) {
+    startDate = `${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`;
+  } else {
+    toast('Formato de fecha inválido', '⚠️'); return;
+  }
+
+  const event = {
+    summary: `📋 ${t.task} — ${t.person}`,
+    description: `Tarea asignada a ${t.person}\nProyecto: ${getActive()?.name || ''}`,
+    start: { date: startDate },
+    end:   { date: startDate },
+    attendees: emails.map(e => ({ email: e })),
+    reminders: { useDefault: false, overrides: [{ method: 'email', minutes: 1440 }, { method: 'popup', minutes: 60 }] }
+  };
+
+  try {
+    const r = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=all', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + state.accessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify(event)
+    });
+    if (r.ok) {
+      toast(`"${t.task}" agendado para ${t.person}`, '📅');
+      closeModal('modal-task');
+    } else {
+      const err = await r.json();
+      toast('Error: ' + (err.error?.message || 'desconocido'), '❌');
+    }
+  } catch(e) { toast('Error de red', '❌'); }
+}
+
+async function scheduleAllToCalendar() {
+  if (!state.accessToken) { toast('Inicia sesión primero', '⚠️'); return; }
+  const p = getActive(); if (!p) return;
+  const people = getPersonList(p);
+  let count = 0, errors = 0;
+  toast('Agendando tareas... ⏳', '📅');
+
+  for (const w of p.weeks) {
+    for (const person of people) {
+      const task = w.tasks[person];
+      if (!task) continue;
+      const email = (p.members[person] || state.user?.email || '');
+      if (!email) continue;
+      await scheduleTask({ person, task, week: w.week, date: w.date, email, color: '' });
+      count++;
+      await sleep(300); // rate limit
+    }
+  }
+  toast(`${count} tareas agendadas en Calendar`, '✅');
+}
+
+// ══════════════════════════════════════════
+//  GOOGLE DRIVE BACKUP
+// ══════════════════════════════════════════
+async function saveState() {
+  saveLocal();
+  if (state.accessToken) await saveToDrive();
+}
+
+function saveLocal() {
+  try {
+    localStorage.setItem('planos_state', JSON.stringify({ projects: state.projects, driveBackupFileId: state.driveBackupFileId }));
+  } catch(e) {}
+}
+
+function loadLocal() {
+  try {
+    const s = JSON.parse(localStorage.getItem('planos_state') || '{}');
+    if (s.projects) state.projects = s.projects;
+    if (s.driveBackupFileId) state.driveBackupFileId = s.driveBackupFileId;
+  } catch(e) {}
+}
+
+async function saveToDrive() {
+  if (!state.accessToken) return;
+  const payload = JSON.stringify({ projects: state.projects, savedAt: new Date().toISOString(), version: 2 }, null, 2);
+  const metadata = { name: 'PlanOS_Backup.json', mimeType: 'application/json', parents: state.driveBackupFileId ? undefined : ['root'] };
+  try {
+    let r;
+    if (state.driveBackupFileId) {
+      // Update existing
+      r = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${state.driveBackupFileId}?uploadType=multipart`, {
+        method: 'PATCH',
+        headers: { Authorization: 'Bearer ' + state.accessToken, 'Content-Type': 'multipart/related; boundary=bound' },
+        body: `--bound\r\nContent-Type: application/json\r\n\r\n${JSON.stringify({name:'PlanOS_Backup.json'})}\r\n--bound\r\nContent-Type: application/json\r\n\r\n${payload}\r\n--bound--`
+      });
+    } else {
+      // Create new
+      r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + state.accessToken, 'Content-Type': 'multipart/related; boundary=bound' },
+        body: `--bound\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(metadata)}\r\n--bound\r\nContent-Type: application/json\r\n\r\n${payload}\r\n--bound--`
+      });
+      if (r.ok) {
+        const data = await r.json();
+        state.driveBackupFileId = data.id;
+        saveLocal();
+      }
+    }
+    if (r.ok) console.log('✅ Drive backup saved');
+  } catch(e) { console.warn('Drive backup failed:', e); }
+}
+
+async function loadFromDrive() {
+  if (!state.accessToken) return;
+  try {
+    // Search for backup file
+    const r = await fetch("https://www.googleapis.com/drive/v3/files?q=name='PlanOS_Backup.json'&spaces=drive&fields=files(id,name,modifiedTime)", {
+      headers: { Authorization: 'Bearer ' + state.accessToken }
+    });
+    const data = await r.json();
+    if (data.files && data.files.length > 0) {
+      const file = data.files[0];
+      state.driveBackupFileId = file.id;
+      // Download content
+      const r2 = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, {
+        headers: { Authorization: 'Bearer ' + state.accessToken }
+      });
+      const backup = await r2.json();
+      if (backup.projects && backup.projects.length > 0) {
+        state.projects = backup.projects;
+        saveLocal();
+        toast(`Proyectos restaurados desde Drive (${backup.projects.length})`, '☁️');
+      }
+    }
+  } catch(e) { console.warn('Could not load from Drive:', e); }
+}
+
+// ══════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════
+function uid() { return Math.random().toString(36).slice(2,10); }
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function getActive() { return state.projects.find(p => p.id === state.activeProject); }
+function initials(name) { return name.split(/[\s-]+/).map(w=>w[0]).join('').toUpperCase().slice(0,2); }
+function escAttr(s) { return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
+function stringColor(s) {
+  let h = 0; for (let c of s) h = (h * 31 + c.charCodeAt(0)) % PERSON_COLORS.length;
+  return PERSON_COLORS[h];
+}
+function formatDate(d) {
+  if (!d) return '';
+  const parts = d.split('/');
+  if (parts.length === 3) return `${parts[1]}/${parts[0]}/${parts[2].slice(2)}`;
+  return d;
+}
+function formatDateFull(d) {
+  if (!d) return 'Sin fecha';
+  try {
+    const parts = d.split('/');
+    if (parts.length === 3) {
+      const dt = new Date(`${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`);
+      return dt.toLocaleDateString('es-CR', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    }
+  } catch(e) {}
+  return d;
+}
+
+let _toastTimer;
+function toast(msg, icon='✓') {
+  const el = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  el.querySelector('.t-icon').textContent = icon;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ══════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════
+loadLocal();
+// Auto-save on visibility change
+document.addEventListener('visibilitychange', () => { if (document.hidden && state.user) saveToDrive(); });
+</script>
+</body>
+</html>
