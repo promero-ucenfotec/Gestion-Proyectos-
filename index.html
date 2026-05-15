@@ -495,7 +495,7 @@ table.gantt{border-collapse:collapse;min-width:100%;}
 // CONSTANTS
 // ---
 const CLIENT_ID='147141081595-mtlv4l70drmlb50aae44bso40kr02n9o.apps.googleusercontent.com';
-const SCOPES='https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive.file profile email';
+const SCOPES='https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive profile email';
 const PC=['#5b7fff','#3dcc78','#f5c542','#e86cad','#26d4b8','#f5894a','#9b72ff','#f06060'];
 const PROJ_C=['#5b7fff','#3dcc78','#26d4b8','#9b72ff','#f5894a','#e86cad','#f5c542'];
 
@@ -947,55 +947,68 @@ async function joinProject(){
   const fid=document.getElementById('join-file-id').value.trim();
   if(!fid){toast('Pegá el Drive File ID','[!]');return;}
   const statusEl=document.getElementById('join-status');
-  statusEl.textContent='Verificando archivo...';
+  statusEl.style.color='var(--text2)';
+  statusEl.textContent='Verificando acceso al archivo...';
 
   try{
-    // 1. Read the file from Drive (it must already be shared with this user)
+    // Step 1: Check file metadata first (confirms we have access)
+    const meta=await fetch(`https://www.googleapis.com/drive/v3/files/${fid}?fields=id,name,mimeType,owners`,
+      {headers:{Authorization:'Bearer '+S.token}}).catch(()=>null);
+
+    if(!meta||!meta.ok){
+      const errData=meta?await meta.json().catch(()=>({})):{};
+      const reason=errData?.error?.message||meta?.status||'sin respuesta';
+      statusEl.style.color='var(--red)';
+      statusEl.textContent=`Sin acceso (${reason}). Pasos: 1) El dueño debe abrir "Invitar" y presionar "Invitar" con tu correo. 2) Verificá que aceptaste el acceso en Drive. 3) Intentá de nuevo.`;
+      return;
+    }
+
+    // Step 2: Download file content
+    statusEl.textContent='Descargando proyecto...';
     const r=await fetch(`https://www.googleapis.com/drive/v3/files/${fid}?alt=media`,
       {headers:{Authorization:'Bearer '+S.token}}).catch(()=>null);
 
     if(!r||!r.ok){
       statusEl.style.color='var(--red)';
-      statusEl.textContent='No se pudo acceder al archivo. Verificá que el dueño lo haya compartido contigo en Drive.';
-      return;
-    }
-    const bk=await r.json();
-    const p=bk.project;
-    if(!p||!p.id){
-      statusEl.style.color='var(--red)';
-      statusEl.textContent='El archivo no parece ser un proyecto PlanOS válido.';
+      statusEl.textContent='Acceso confirmado pero no se pudo leer el contenido. Intentá de nuevo en unos segundos.';
       return;
     }
 
-    // 2. Ensure PlanOS folder exists in THIS user's Drive
+    const bk=await r.json().catch(()=>null);
+    if(!bk?.project?.id){
+      statusEl.style.color='var(--red)';
+      statusEl.textContent='El archivo no es un proyecto PlanOS válido.';
+      return;
+    }
+    const p=bk.project;
+
+    // Step 3: Ensure PlanOS folder exists in THIS user's Drive
     statusEl.style.color='var(--text2)';
     statusEl.textContent='Creando carpeta PlanOS en tu Drive...';
     const folderId=await ensureFolder();
 
-    // 3. Create a shortcut to the shared file inside the user's PlanOS/ folder
+    // Step 4: Create shortcut inside PlanOS/ folder
     statusEl.textContent='Creando acceso directo en tu Drive...';
     if(folderId){
-      // Check if shortcut already exists
       const chk=await fetch(
-        `https://www.googleapis.com/drive/v3/files?q='${folderId}' in parents and name='shortcut_${p.id}.json' and trashed=false&fields=files(id)`,
+        `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+name='shortcut_${p.id}'+and+trashed=false&fields=files(id)`,
         {headers:{Authorization:'Bearer '+S.token}}).catch(()=>null);
-      const chkd=chk?.ok?await chk.json():{files:[]};
+      const chkd=chk?.ok?await chk.json().catch(()=>({})):{files:[]};
       if(!chkd.files?.length){
-        // Create shortcut
         await fetch('https://www.googleapis.com/drive/v3/files',{
           method:'POST',
           headers:{Authorization:'Bearer '+S.token,'Content-Type':'application/json'},
           body:JSON.stringify({
-            name:`shortcut_${p.id}.json`,
+            name:`shortcut_${p.id}`,
             mimeType:'application/vnd.google-apps.shortcut',
             parents:[folderId],
             shortcutDetails:{targetId:fid}
           })
-        }).catch(e=>console.warn('Shortcut creation failed (non-blocking):',e));
+        }).catch(e=>console.warn('Shortcut failed (non-blocking):',e));
       }
     }
 
-    // 4. Store project locally; mark driveFileId so future saves update the owner's file
+    // Step 5: Save locally
     p.driveFileId=fid;
     migrate_one(p);
     const existing=S.projects.findIndex(x=>x.id===p.id);
@@ -1004,14 +1017,14 @@ async function joinProject(){
     saveLocal();
 
     statusEl.style.color='var(--green)';
-    statusEl.textContent=`[ok] Proyecto "${p.name}" agregado correctamente.`;
-    setTimeout(()=>{closeModal('m-new-project');showProject(p.id);},800);
-    toast(`Proyecto "${p.name}" cargado desde Drive [drive]`);
+    statusEl.textContent=`Proyecto "${p.name}" agregado.`;
+    setTimeout(()=>{closeModal('m-new-project');showProject(p.id);},600);
+    toast('Proyecto cargado desde Drive [drive]');
 
   }catch(e){
-    console.error(e);
+    console.error('joinProject error:',e);
     statusEl.style.color='var(--red)';
-    statusEl.textContent='Error inesperado: '+e.message;
+    statusEl.textContent='Error: '+e.message+'. Verificá la consola del navegador para más detalles.';
   }
 }
 
@@ -1091,11 +1104,12 @@ function removeCollab(email){
 async function shareDriveFile(fileId,email){
   if(!S.token||!fileId)return false;
   try{
-    const r=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions?sendNotificationEmail=false`,{
+    const r=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions?sendNotificationEmail=true&emailMessage=Te%20invitaron%20a%20un%20proyecto%20en%20PlanOS.%20Usá%20el%20Drive%20File%20ID%20del%20Calendar%20invite%20para%20unirte.`,{
       method:'POST',
       headers:{Authorization:'Bearer '+S.token,'Content-Type':'application/json'},
       body:JSON.stringify({type:'user',role:'writer',emailAddress:email})
     });
+    if(!r.ok){const e=await r.json().catch(()=>({}));console.warn('Share failed:',e);}
     return r.ok;
   }catch(e){console.warn('Share failed',e);return false;}
 }
