@@ -3,1233 +3,1197 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Planificador de Proyectos</title>
+<title>PlanOS – Cronogramas</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,300;0,600;1,300&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Fraunces:ital,wght@0,300;0,600;1,300;1,600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0e0f14;
-    --surface: #161820;
-    --surface2: #1e2030;
-    --border: #2a2d3e;
-    --accent: #6c8cff;
-    --accent2: #a78bfa;
-    --green: #4ade80;
-    --yellow: #fbbf24;
-    --red: #f87171;
-    --orange: #fb923c;
-    --teal: #2dd4bf;
-    --pink: #f472b6;
-    --text: #e2e4f0;
-    --text2: #8b8fa8;
-    --text3: #555870;
-    --radius: 12px;
-    --radius-sm: 8px;
-  }
-
-  * { margin:0; padding:0; box-sizing:border-box; }
-
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* ── NOISE OVERLAY ── */
-  body::before {
-    content: '';
-    position: fixed; inset: 0; z-index: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-    pointer-events: none;
-  }
-
-  /* ── TOP BAR ── */
-  #topbar {
-    position: sticky; top: 0; z-index: 100;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 28px;
-    background: rgba(14,15,20,0.85);
-    backdrop-filter: blur(18px);
-    border-bottom: 1px solid var(--border);
-  }
-
-  .logo {
-    font-family: 'Fraunces', serif;
-    font-size: 1.3rem;
-    color: var(--text);
-    letter-spacing: -0.02em;
-  }
-  .logo span { color: var(--accent); }
-
-  #user-pill {
-    display: flex; align-items: center; gap: 10px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 50px;
-    padding: 6px 14px 6px 8px;
-    font-size: .82rem;
-    cursor: pointer;
-    transition: border-color .2s;
-  }
-  #user-pill:hover { border-color: var(--accent); }
-  #user-pill img { width:26px; height:26px; border-radius:50%; }
-  #user-pill .name { color: var(--text); font-weight: 500; }
-  #user-pill .email { color: var(--text2); font-size: .75rem; }
-
-  #login-btn {
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: 50px;
-    padding: 9px 20px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: .85rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: opacity .2s, transform .15s;
-    display: flex; align-items: center; gap: 8px;
-  }
-  #login-btn:hover { opacity: .88; transform: translateY(-1px); }
-
-  /* ── MAIN LAYOUT ── */
-  #app { position: relative; z-index: 1; }
-
-  /* ── SPLASH / LOGIN ── */
-  #splash {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    min-height: calc(100vh - 62px);
-    gap: 24px; padding: 40px;
-    text-align: center;
-  }
-  #splash h1 {
-    font-family: 'Fraunces', serif;
-    font-size: clamp(2.4rem, 6vw, 4.5rem);
-    line-height: 1.1;
-    letter-spacing: -0.03em;
-    background: linear-gradient(135deg, #e2e4f0 30%, #6c8cff 70%);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  }
-  #splash p {
-    color: var(--text2); font-size: 1.05rem; max-width: 520px; line-height: 1.6;
-  }
-  #splash .features {
-    display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; margin-top: 8px;
-  }
-  #splash .feat-chip {
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 50px; padding: 7px 16px; font-size: .82rem; color: var(--text2);
-    display: flex; align-items: center; gap: 6px;
-  }
-  #splash .feat-chip .dot { width:7px; height:7px; border-radius:50%; background: var(--accent); }
-
-  /* ── HOME ── */
-  #home { display: none; padding: 32px 28px; max-width: 1400px; margin: 0 auto; }
-
-  .section-title {
-    font-family: 'Fraunces', serif;
-    font-size: 1.4rem;
-    letter-spacing: -0.02em;
-    color: var(--text);
-    margin-bottom: 4px;
-  }
-  .section-sub { color: var(--text2); font-size: .85rem; margin-bottom: 20px; }
-
-  /* Projects grid */
-  #projects-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 16px;
-    margin-bottom: 40px;
-  }
-
-  .project-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-    cursor: pointer;
-    transition: border-color .2s, transform .15s, box-shadow .2s;
-    position: relative; overflow: hidden;
-  }
-  .project-card::before {
-    content: '';
-    position: absolute; top: 0; left: 0; right: 0; height: 3px;
-    background: var(--card-accent, var(--accent));
-    border-radius: 3px 3px 0 0;
-  }
-  .project-card:hover {
-    border-color: var(--card-accent, var(--accent));
-    transform: translateY(-2px);
-    box-shadow: 0 8px 32px rgba(108,140,255,.12);
-  }
-  .project-card .pc-name {
-    font-weight: 600; font-size: 1rem; margin-bottom: 6px;
-  }
-  .project-card .pc-meta { color: var(--text2); font-size: .8rem; margin-bottom: 12px; }
-  .project-card .pc-progress {
-    height: 4px; background: var(--border); border-radius: 4px; overflow: hidden;
-  }
-  .project-card .pc-progress-fill {
-    height: 100%; background: var(--card-accent, var(--accent));
-    border-radius: 4px; transition: width .4s ease;
-  }
-  .project-card .pc-members {
-    display: flex; margin-top: 12px; gap: -4px;
-  }
-  .avatar {
-    width: 26px; height: 26px; border-radius: 50%;
-    background: var(--surface2); border: 2px solid var(--surface);
-    display: flex; align-items: center; justify-content: center;
-    font-size: .65rem; font-weight: 600; color: var(--text2);
-    margin-right: -6px;
-  }
-
-  .new-project-card {
-    background: transparent;
-    border: 1.5px dashed var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-    cursor: pointer;
-    transition: border-color .2s;
-    display: flex; align-items: center; justify-content: center;
-    gap: 10px; color: var(--text3); font-size: .9rem;
-    min-height: 140px;
-  }
-  .new-project-card:hover { border-color: var(--accent); color: var(--accent); }
-
-  /* ── GANTT VIEW ── */
-  #project-view { display: none; padding: 24px 28px; max-width: 100%; }
-
-  .pv-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
-  }
-  .pv-back {
-    display: flex; align-items: center; gap: 8px;
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 50px; padding: 7px 16px;
-    cursor: pointer; font-size: .85rem; color: var(--text2);
-    transition: color .2s, border-color .2s;
-  }
-  .pv-back:hover { color: var(--text); border-color: var(--accent); }
-  .pv-actions { display: flex; gap: 10px; }
-  
-  .btn {
-    display: flex; align-items: center; gap: 7px;
-    padding: 8px 18px; border-radius: 50px;
-    font-family: 'DM Sans', sans-serif; font-size: .85rem; font-weight: 500;
-    cursor: pointer; border: none; transition: opacity .2s, transform .15s;
-  }
-  .btn:hover { opacity: .85; transform: translateY(-1px); }
-  .btn-primary { background: var(--accent); color: #fff; }
-  .btn-ghost { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
-  .btn-green { background: var(--green); color: #0a0a0a; }
-  .btn-teal { background: var(--teal); color: #0a0a0a; }
-
-  /* GANTT */
-  .gantt-wrap {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-    margin-bottom: 24px;
-  }
-
-  .gantt-scroll { overflow-x: auto; }
-
-  table.gantt {
-    border-collapse: collapse;
-    min-width: 100%;
-  }
-
-  .gantt thead th {
-    background: var(--surface2);
-    padding: 10px 14px;
-    font-size: .75rem; font-weight: 600;
-    color: var(--text2);
-    text-transform: uppercase; letter-spacing: .05em;
-    border-bottom: 1px solid var(--border);
-    white-space: nowrap;
-    text-align: left;
-  }
-
-  .gantt thead .week-header {
-    text-align: center;
-    min-width: 110px;
-  }
-
-  .gantt tbody tr {
-    border-bottom: 1px solid rgba(42,45,62,.6);
-    transition: background .15s;
-  }
-  .gantt tbody tr:hover { background: rgba(108,140,255,.04); }
-  .gantt tbody tr:last-child { border-bottom: none; }
-
-  .gantt .person-cell {
-    padding: 10px 16px;
-    font-size: .82rem; font-weight: 600;
-    color: var(--text);
-    white-space: nowrap;
-    background: var(--surface);
-    position: sticky; left: 0;
-    border-right: 1px solid var(--border);
-    z-index: 2;
-  }
-  .gantt .person-cell .p-email { font-size: .72rem; color: var(--text3); font-weight: 400; }
-
-  .gantt .task-cell {
-    padding: 6px 8px;
-    text-align: center;
-    vertical-align: middle;
-    min-width: 110px;
-  }
-
-  .task-block {
-    background: var(--tb-color, var(--accent));
-    color: #fff;
-    border-radius: 6px;
-    padding: 5px 10px;
-    font-size: .75rem;
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 200px;
-    cursor: pointer;
-    transition: opacity .2s, transform .15s;
-    text-align: left;
-    position: relative;
-  }
-  .task-block:hover { opacity: .85; transform: scale(1.03); }
-
-  .task-block.empty { background: transparent; cursor: default; }
-
-  /* WEEK ROW (header row) */
-  .week-label-row th {
-    background: rgba(108,140,255,.06);
-    padding: 8px 8px;
-    font-size: .78rem;
-    color: var(--accent);
-    text-align: center;
-    border-bottom: 1px solid var(--border);
-  }
-
-  /* ── MODAL ── */
-  .modal-overlay {
-    display: none; position: fixed; inset: 0; z-index: 200;
-    background: rgba(0,0,0,.7); backdrop-filter: blur(6px);
-    align-items: center; justify-content: center;
-    padding: 20px;
-  }
-  .modal-overlay.open { display: flex; }
-
-  .modal {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 28px;
-    width: 100%; max-width: 480px;
-    max-height: 85vh; overflow-y: auto;
-    animation: modalIn .2s ease;
-  }
-  @keyframes modalIn {
-    from { opacity: 0; transform: scale(.95) translateY(10px); }
-    to   { opacity: 1; transform: scale(1)   translateY(0); }
-  }
-
-  .modal h3 {
-    font-family: 'Fraunces', serif;
-    font-size: 1.2rem; margin-bottom: 6px;
-  }
-  .modal .modal-sub { color: var(--text2); font-size: .83rem; margin-bottom: 20px; }
-  .modal label { display: block; font-size: .8rem; color: var(--text2); margin-bottom: 5px; font-weight: 500; }
-  .modal input, .modal textarea, .modal select {
-    width: 100%; background: var(--surface2); border: 1px solid var(--border);
-    border-radius: var(--radius-sm); color: var(--text);
-    font-family: 'DM Sans', sans-serif; font-size: .88rem;
-    padding: 9px 12px; margin-bottom: 14px;
-    transition: border-color .2s;
-  }
-  .modal input:focus, .modal textarea:focus, .modal select:focus {
-    outline: none; border-color: var(--accent);
-  }
-  .modal textarea { resize: vertical; min-height: 70px; }
-  .modal .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
-
-  /* Member list in settings */
-  .member-row {
-    display: flex; align-items: center; gap: 10px;
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: var(--radius-sm); padding: 10px 12px;
-    margin-bottom: 8px;
-  }
-  .member-row .avatar-big {
-    width:34px; height:34px; border-radius:50%;
-    background: var(--border); display:flex; align-items:center; justify-content:center;
-    font-size:.8rem; font-weight:600; color:var(--text2);
-    flex-shrink:0;
-  }
-  .member-row .m-info { flex:1; }
-  .member-row .m-name { font-size:.85rem; font-weight:500; }
-  .member-row .m-email { font-size:.75rem; color:var(--text2); }
-  .member-row .m-del {
-    background:none; border:none; color:var(--text3); cursor:pointer; font-size:1rem;
-    transition:color .2s; padding:4px;
-  }
-  .member-row .m-del:hover { color:var(--red); }
-
-  /* File drop */
-  .file-drop {
-    border: 1.5px dashed var(--border);
-    border-radius: var(--radius);
-    padding: 28px; text-align: center;
-    cursor: pointer; transition: border-color .2s, background .2s;
-    color: var(--text2); font-size: .88rem;
-  }
-  .file-drop:hover, .file-drop.drag { border-color: var(--accent); background: rgba(108,140,255,.05); }
-  .file-drop .fd-icon { font-size: 2rem; margin-bottom: 8px; }
-
-  /* Toast */
-  #toast {
-    position: fixed; bottom: 28px; right: 28px; z-index: 999;
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 12px; padding: 12px 20px;
-    font-size: .85rem; color: var(--text);
-    opacity: 0; transform: translateY(10px);
-    transition: opacity .25s, transform .25s;
-    pointer-events: none; max-width: 340px;
-    display: flex; align-items: center; gap: 10px;
-  }
-  #toast.show { opacity: 1; transform: translateY(0); }
-  #toast .t-icon { font-size: 1.1rem; }
-
-  /* Pill badge */
-  .badge {
-    display: inline-flex; align-items: center;
-    background: rgba(108,140,255,.12); color: var(--accent);
-    border-radius: 50px; padding: 2px 10px; font-size: .75rem; font-weight: 600;
-  }
-
-  /* ── SCROLLBAR ── */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-  /* ── LEGEND ── */
-  .legend { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-  .legend-item {
-    display: flex; align-items: center; gap: 6px; font-size: .78rem; color: var(--text2);
-  }
-  .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
-
-  /* Progress summary */
-  .progress-bar-wrap {
-    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 20px; margin-bottom: 20px;
-    display: flex; gap: 24px; flex-wrap: wrap; align-items: center;
-  }
-  .progress-stat { flex: 1; min-width: 120px; }
-  .progress-stat .ps-num {
-    font-family: 'Fraunces', serif; font-size: 1.6rem; color: var(--text); letter-spacing: -0.02em;
-  }
-  .progress-stat .ps-label { color: var(--text2); font-size: .78rem; margin-top: 2px; }
-  .big-progress { flex: 3; min-width: 200px; }
-  .big-progress-bar { height: 8px; background: var(--border); border-radius: 8px; overflow: hidden; }
-  .big-progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 8px; transition: width .5s ease; }
-
-  .divider { height:1px; background: var(--border); margin: 24px 0; }
-
-  /* Calendar schedule icon */
-  .cal-badge { background: rgba(45,212,191,.1); color: var(--teal); border: 1px solid rgba(45,212,191,.2); }
-
-  /* ── RESPONSIVE ── */
-  @media (max-width: 600px) {
-    #topbar { padding: 12px 16px; }
-    #home, #project-view { padding: 20px 16px; }
-    .gantt .person-cell { min-width: 100px; padding: 8px 10px; }
-  }
+:root{
+  --bg:#0b0c10;--surface:#13141a;--surface2:#1a1c25;--surface3:#212430;
+  --border:#272a3a;--border2:#333650;
+  --accent:#5b7fff;--accent-glow:rgba(91,127,255,.18);
+  --accent2:#9b72ff;--teal:#26d4b8;--green:#3dcc78;
+  --yellow:#f5c542;--red:#f06060;--orange:#f5894a;--pink:#e86cad;
+  --text:#dde0f0;--text2:#838799;--text3:#484c65;
+  --r:12px;--rs:8px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;z-index:0;opacity:.035;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events:none;}
+#topbar{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-content:space-between;
+  padding:12px 26px;background:rgba(11,12,16,.88);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);}
+.logo{font-family:'Fraunces',serif;font-size:1.25rem;letter-spacing:-.02em;}
+.logo em{color:var(--accent);font-style:normal;}
+#user-pill{display:flex;align-items:center;gap:9px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:50px;padding:5px 14px 5px 7px;font-size:.82rem;cursor:pointer;transition:border-color .2s;}
+#user-pill:hover{border-color:var(--accent);}
+#user-pill img{width:24px;height:24px;border-radius:50%;object-fit:cover;}
+.uname{font-weight:500;color:var(--text);}
+.uemail{font-size:.72rem;color:var(--text2);}
+#login-btn{background:var(--accent);color:#fff;border:none;border-radius:50px;padding:8px 20px;
+  font-family:'DM Sans',sans-serif;font-size:.84rem;font-weight:500;cursor:pointer;
+  display:flex;align-items:center;gap:8px;transition:opacity .2s,transform .15s;}
+#login-btn:hover{opacity:.85;transform:translateY(-1px);}
+#app{position:relative;z-index:1;}
+#splash{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:calc(100vh - 58px);gap:22px;padding:40px;text-align:center;}
+#splash h1{font-family:'Fraunces',serif;font-size:clamp(2.2rem,6vw,4.2rem);
+  line-height:1.08;letter-spacing:-.03em;
+  background:linear-gradient(135deg,#dde0f0 25%,#5b7fff 65%,#9b72ff 90%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+#splash p{color:var(--text2);font-size:1rem;max-width:500px;line-height:1.65;}
+.chips{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:6px;}
+.chip{background:var(--surface2);border:1px solid var(--border);border-radius:50px;
+  padding:6px 15px;font-size:.8rem;color:var(--text2);display:flex;align-items:center;gap:6px;}
+.chip .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);}
+#home{display:none;padding:30px 26px;max-width:1440px;margin:0 auto;}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:26px;flex-wrap:wrap;gap:12px;}
+.page-title{font-family:'Fraunces',serif;font-size:1.5rem;letter-spacing:-.025em;}
+.page-sub{color:var(--text2);font-size:.83rem;margin-top:3px;}
+#projects-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;margin-bottom:40px;}
+.project-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  padding:18px 20px;cursor:pointer;transition:border-color .2s,transform .15s,box-shadow .2s;position:relative;overflow:hidden;}
+.project-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:var(--card-color,var(--accent));border-radius:3px 3px 0 0;}
+.project-card:hover{border-color:var(--card-color,var(--accent));transform:translateY(-2px);box-shadow:0 8px 28px rgba(91,127,255,.1);}
+.pc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;}
+.pc-name{font-weight:600;font-size:.95rem;line-height:1.3;}
+.pc-menu-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:1.1rem;
+  padding:2px 6px;border-radius:6px;transition:color .2s,background .2s;line-height:1;}
+.pc-menu-btn:hover{color:var(--text);background:var(--surface2);}
+.pc-meta{color:var(--text2);font-size:.78rem;margin-bottom:10px;}
+.pc-prog{height:3px;background:var(--border);border-radius:4px;overflow:hidden;margin-bottom:10px;}
+.pc-prog-fill{height:100%;border-radius:4px;transition:width .4s;}
+.pc-footer{display:flex;align-items:center;justify-content:space-between;}
+.avatars{display:flex;}
+.av{width:24px;height:24px;border-radius:50%;border:2px solid var(--surface);
+  display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;margin-right:-5px;flex-shrink:0;}
+.add-proj-card{background:transparent;border:1.5px dashed var(--border);border-radius:var(--r);
+  padding:20px;cursor:pointer;transition:border-color .2s;display:flex;align-items:center;
+  justify-content:center;gap:9px;color:var(--text3);font-size:.88rem;min-height:130px;}
+.add-proj-card:hover{border-color:var(--accent);color:var(--accent);}
+#project-view{display:none;padding:22px 26px;max-width:100%;}
+.pv-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:10px;}
+.pv-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.back-btn{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:50px;padding:6px 14px;cursor:pointer;font-size:.83rem;color:var(--text2);transition:color .2s,border-color .2s;}
+.back-btn:hover{color:var(--text);border-color:var(--accent);}
+.pv-title{font-family:'Fraunces',serif;font-size:1.35rem;letter-spacing:-.025em;}
+.pv-sub{color:var(--text2);font-size:.8rem;margin-top:1px;}
+.pv-actions{display:flex;gap:7px;flex-wrap:wrap;}
+.stats-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  padding:18px 22px;margin-bottom:18px;display:flex;gap:20px;flex-wrap:wrap;align-items:center;}
+.stat{flex:1;min-width:80px;}
+.stat-n{font-family:'Fraunces',serif;font-size:1.5rem;letter-spacing:-.02em;}
+.stat-l{color:var(--text2);font-size:.74rem;margin-top:1px;}
+.stat-prog{flex:4;min-width:180px;}
+.sp-row{display:flex;justify-content:space-between;margin-bottom:6px;font-size:.78rem;}
+.sp-bar{height:7px;background:var(--border);border-radius:6px;overflow:hidden;}
+.sp-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:6px;transition:width .5s;}
+.toolbar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+.legend{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:.75rem;color:var(--text2);}
+.leg-dot{width:9px;height:9px;border-radius:3px;}
+.gantt-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:22px;}
+.gantt-scroll{overflow-x:auto;}
+table.gantt{border-collapse:collapse;min-width:100%;}
+.gantt thead th{background:var(--surface2);padding:9px 12px;font-size:.72rem;font-weight:600;
+  color:var(--text2);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);
+  white-space:nowrap;text-align:left;}
+.wh{text-align:center;min-width:130px;cursor:pointer;transition:background .15s;position:relative;}
+.wh:hover{background:var(--surface3);}
+.wh-label{font-size:.73rem;font-weight:700;color:var(--accent);}
+.wh-date{font-size:.65rem;color:var(--text3);margin-top:1px;font-weight:400;}
+.wh-edit{position:absolute;top:4px;right:4px;opacity:0;font-size:.63rem;color:var(--accent);transition:opacity .15s;}
+.wh:hover .wh-edit{opacity:1;}
+.wh.past{opacity:.5;}
+.wh.today{background:rgba(91,127,255,.07);}
+.wh.today .wh-label{color:var(--accent2);}
+.gantt tbody tr{border-bottom:1px solid rgba(39,42,58,.7);transition:background .15s;}
+.gantt tbody tr:hover{background:rgba(91,127,255,.03);}
+.gantt tbody tr:last-child{border-bottom:none;}
+.person-cell{padding:9px 14px;font-size:.81rem;font-weight:600;background:var(--surface);
+  position:sticky;left:0;border-right:1px solid var(--border);z-index:2;white-space:nowrap;}
+.pc-em{font-size:.7rem;color:var(--text3);font-weight:400;font-style:italic;}
+.task-cell{padding:5px 6px;text-align:center;min-width:130px;vertical-align:middle;}
+.task-block{background:var(--tb,var(--accent));color:#fff;border-radius:7px;padding:5px 10px;
+  font-size:.74rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  max-width:220px;cursor:pointer;transition:opacity .18s,transform .13s,box-shadow .15s;
+  text-align:left;position:relative;display:inline-flex;align-items:center;gap:5px;width:100%;}
+.task-block:hover{opacity:.88;transform:scale(1.02);box-shadow:0 3px 14px rgba(0,0,0,.3);}
+.task-block.has-sub::after{content:'';width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.6);flex-shrink:0;margin-left:auto;}
+.task-block.done{opacity:.55;}
+.add-task-btn{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;
+  border-radius:6px;border:1.5px dashed var(--border);color:var(--text3);cursor:pointer;font-size:1rem;
+  transition:border-color .15s,color .15s;background:none;}
+.add-task-btn:hover{border-color:var(--accent);color:var(--accent);}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:7px 16px;border-radius:50px;
+  font-family:'DM Sans',sans-serif;font-size:.83rem;font-weight:500;cursor:pointer;border:none;
+  transition:opacity .18s,transform .13s;}
+.btn:hover{opacity:.84;transform:translateY(-1px);}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+.btn-ghost:hover{color:var(--text);}
+.btn-teal{background:var(--teal);color:#061210;}
+.btn-red{background:rgba(240,96,96,.15);color:var(--red);border:1px solid rgba(240,96,96,.25);}
+.btn-sm{padding:5px 12px;font-size:.78rem;}
+.overlay{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.72);
+  backdrop-filter:blur(7px);align-items:center;justify-content:center;padding:20px;}
+.overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:16px;
+  padding:26px;width:100%;max-height:88vh;overflow-y:auto;animation:mIn .2s ease;}
+@keyframes mIn{from{opacity:0;transform:scale(.95) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal h3{font-family:'Fraunces',serif;font-size:1.15rem;margin-bottom:4px;}
+.msub{color:var(--text2);font-size:.81rem;margin-bottom:18px;}
+.field{margin-bottom:13px;}
+.field label{display:block;font-size:.78rem;color:var(--text2);margin-bottom:4px;font-weight:500;}
+.field input,.field textarea,.field select{width:100%;background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.87rem;
+  padding:8px 11px;transition:border-color .2s;outline:none;}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--accent);}
+.field textarea{resize:vertical;min-height:65px;}
+.mactions{display:flex;gap:9px;justify-content:flex-end;margin-top:6px;flex-wrap:wrap;}
+.divider{height:1px;background:var(--border);margin:16px 0;}
+.color-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.col-swatch{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:border-color .15s,transform .13s;}
+.col-swatch:hover,.col-swatch.sel{border-color:#fff;transform:scale(1.15);}
+.member-row{display:flex;align-items:center;gap:9px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--rs);padding:9px 11px;margin-bottom:7px;}
+.mbig{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;flex-shrink:0;}
+.m-info{flex:1;min-width:0;}
+.m-name{font-size:.84rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.m-email-inp{background:transparent;border:none;border-bottom:1px solid var(--border);border-radius:0;
+  padding:2px 0;margin-bottom:0;font-size:.78rem;color:var(--text2);width:100%;outline:none;font-family:'DM Sans',sans-serif;}
+.m-email-inp:focus{border-color:var(--accent);}
+.m-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:.9rem;transition:color .2s;padding:4px;}
+.m-del:hover{color:var(--red);}
+.file-drop{border:1.5px dashed var(--border);border-radius:var(--r);padding:26px;text-align:center;
+  cursor:pointer;transition:border-color .2s,background .2s;color:var(--text2);font-size:.87rem;}
+.file-drop:hover,.file-drop.drag{border-color:var(--accent);background:var(--accent-glow);}
+.fd-icon{font-size:1.8rem;margin-bottom:8px;}
+.sub-list{display:flex;flex-direction:column;gap:5px;margin-bottom:6px;}
+.sub-item{display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:6px;padding:7px 10px;font-size:.8rem;}
+.sub-item input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;cursor:pointer;flex-shrink:0;}
+.sub-text{flex:1;color:var(--text2);}
+.sub-text.done-txt{text-decoration:line-through;opacity:.5;}
+.sub-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:.8rem;transition:color .15s;padding:2px;}
+.sub-del:hover{color:var(--red);}
+.sub-add-row{display:flex;gap:7px;margin-top:2px;}
+.sub-inp{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);
+  font-family:'DM Sans',sans-serif;font-size:.82rem;padding:6px 10px;outline:none;}
+.sub-inp:focus{border-color:var(--accent);}
+.collab-chip{display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:50px;padding:5px 12px 5px 8px;font-size:.78rem;margin-bottom:6px;}
+.collab-del{background:none;border:none;color:var(--text3);cursor:pointer;margin-left:auto;transition:color .15s;padding:2px;}
+.collab-del:hover{color:var(--red);}
+.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin-bottom:14px;}
+.info-cell{background:var(--surface2);border-radius:8px;padding:10px 12px;}
+.ic-label{font-size:.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
+.ic-val{font-size:.86rem;font-weight:500;}
+.status-badge{display:inline-flex;align-items:center;gap:5px;border-radius:50px;padding:3px 10px;font-size:.72rem;font-weight:600;}
+.s-pending{background:rgba(245,197,66,.12);color:var(--yellow);}
+.s-done{background:rgba(61,204,120,.12);color:var(--green);}
+#toast{position:fixed;bottom:26px;right:26px;z-index:999;background:var(--surface2);
+  border:1px solid var(--border2);border-radius:12px;padding:11px 18px;font-size:.84rem;
+  opacity:0;transform:translateY(8px);transition:opacity .22s,transform .22s;
+  pointer-events:none;display:flex;align-items:center;gap:9px;max-width:320px;}
+#toast.show{opacity:1;transform:translateY(0);}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+@media(max-width:600px){
+  #topbar,#home,#project-view{padding-left:14px;padding-right:14px;}
+  .pv-actions{gap:5px;}
+  .btn-sm{padding:4px 9px;font-size:.73rem;}
+}
 </style>
 </head>
 <body>
-
-<!-- TOP BAR -->
 <div id="topbar">
-  <div class="logo">Plan<span>OS</span></div>
+  <div class="logo">Plan<em>OS</em></div>
   <div id="auth-area">
     <button id="login-btn" onclick="handleLogin()">
-      <svg width="16" height="16" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#fff"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#fff"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#fff"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#fff"/></svg>
-      Continuar con Google
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#fff"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#fff"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#fff"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#fff"/>
+      </svg>
+      Iniciar sesión con Google
     </button>
   </div>
 </div>
 
-<!-- APP -->
 <div id="app">
-
-  <!-- SPLASH -->
   <div id="splash">
     <h1>Cronogramas que<br><em>realmente funcionan</em></h1>
-    <p>Importa un CSV, visualiza el Gantt de tu equipo, programa eventos en Google Calendar y respalda todo en Drive.</p>
-    <div class="features">
-      <div class="feat-chip"><span class="dot"></span>Gantt interactivo</div>
-      <div class="feat-chip"><span class="dot" style="background:var(--teal)"></span>Google Calendar</div>
-      <div class="feat-chip"><span class="dot" style="background:var(--green)"></span>Drive Backup</div>
-      <div class="feat-chip"><span class="dot" style="background:var(--accent2)"></span>Multi-proyecto</div>
+    <p>Importa CSV, visualiza el Gantt, agenda en Google Calendar y respalda en Drive.</p>
+    <div class="chips">
+      <div class="chip"><span class="dot"></span>Gantt interactivo</div>
+      <div class="chip"><span class="dot" style="background:var(--teal)"></span>Google Calendar</div>
+      <div class="chip"><span class="dot" style="background:var(--green)"></span>Drive Backup</div>
+      <div class="chip"><span class="dot" style="background:var(--accent2)"></span>Colaboradores</div>
+      <div class="chip"><span class="dot" style="background:var(--yellow)"></span>Subtareas</div>
     </div>
-    <button id="login-btn2" class="btn btn-primary" style="padding:14px 32px;font-size:1rem;" onclick="handleLogin()">
+    <button class="btn btn-primary" style="padding:13px 30px;font-size:.95rem;margin-top:6px;" onclick="handleLogin()">
       Iniciar sesión con Google
     </button>
   </div>
 
-  <!-- HOME -->
   <div id="home">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;">
+    <div class="page-header">
       <div>
-        <div class="section-title" id="welcome-title">Buenos días 👋</div>
-        <div class="section-sub">Tus proyectos activos</div>
-      </div>
-      <button class="btn btn-ghost" onclick="openImportModal()">
-        ↑ Importar CSV
-      </button>
-    </div>
-    <div id="projects-grid">
-      <div class="new-project-card" onclick="openNewProjectModal()">
-        <span style="font-size:1.4rem">＋</span> Nuevo proyecto
+        <div class="page-title" id="welcome-title">Hola 👋</div>
+        <div class="page-sub">Tus proyectos activos</div>
       </div>
     </div>
+    <div id="projects-grid"></div>
   </div>
 
-  <!-- PROJECT GANTT VIEW -->
   <div id="project-view">
-    <div class="pv-header">
-      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-        <div class="pv-back" onclick="showHome()">← Proyectos</div>
+    <div class="pv-top">
+      <div class="pv-left">
+        <div class="back-btn" onclick="showHome()">← Proyectos</div>
         <div>
-          <h2 id="pv-title" style="font-family:'Fraunces',serif;font-size:1.4rem;letter-spacing:-.02em;"></h2>
-          <div id="pv-meta" style="color:var(--text2);font-size:.82rem;margin-top:2px;"></div>
+          <div class="pv-title" id="pv-title"></div>
+          <div class="pv-sub" id="pv-sub"></div>
         </div>
       </div>
       <div class="pv-actions">
-        <button class="btn btn-ghost" onclick="openSettings()">⚙ Configurar equipo</button>
-        <button class="btn btn-teal" onclick="scheduleAllToCalendar()">📅 Agendar en Calendar</button>
+        <button class="btn btn-ghost btn-sm" onclick="openModal('m-import')">↑ CSV</button>
+        <button class="btn btn-ghost btn-sm" onclick="addWeek()">＋ Semana</button>
+        <button class="btn btn-ghost btn-sm" onclick="openSettings()">⚙ Equipo</button>
+        <button class="btn btn-ghost btn-sm" onclick="openInviteModal()">👤 Invitar</button>
+        <button class="btn btn-ghost btn-sm" onclick="openEditProjectModal()">✏ Editar</button>
+        <button class="btn btn-teal btn-sm" onclick="scheduleAll()">📅 Agendar todo</button>
+        <button class="btn btn-red btn-sm" onclick="deleteProject()">🗑</button>
       </div>
     </div>
-
-    <!-- Stats -->
-    <div class="progress-bar-wrap" id="pv-stats"></div>
-
-    <!-- Legend -->
-    <div class="legend" id="gantt-legend"></div>
-
-    <!-- Gantt -->
-    <div class="gantt-wrap">
-      <div class="gantt-scroll">
-        <table class="gantt" id="gantt-table"></table>
-      </div>
-    </div>
+    <div class="stats-bar" id="pv-stats"></div>
+    <div class="toolbar"><div class="legend" id="gantt-legend"></div></div>
+    <div class="gantt-wrap"><div class="gantt-scroll"><table class="gantt" id="gantt-table"></table></div></div>
   </div>
 </div>
 
-<!-- ── MODALS ── -->
-
-<!-- New Project Modal -->
-<div class="modal-overlay" id="modal-new-project">
-  <div class="modal">
+<!-- NEW PROJECT -->
+<div class="overlay" id="m-new-project">
+  <div class="modal" style="max-width:430px;">
     <h3>Nuevo proyecto</h3>
-    <div class="modal-sub">Crea un proyecto en blanco o importa desde CSV</div>
-    <label>Nombre del proyecto</label>
-    <input id="np-name" type="text" placeholder="ej. BIROB Tomo I" />
-    <label>Descripción (opcional)</label>
-    <textarea id="np-desc" placeholder="Breve descripción del proyecto..."></textarea>
-    <label>Color de acento</label>
-    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
-      <div class="color-opt" data-color="#6c8cff" onclick="selectColor(this)" style="width:28px;height:28px;border-radius:50%;background:#6c8cff;cursor:pointer;border:2px solid white;"></div>
-      <div class="color-opt" data-color="#4ade80" onclick="selectColor(this)" style="width:28px;height:28px;border-radius:50%;background:#4ade80;cursor:pointer;"></div>
-      <div class="color-opt" data-color="#fbbf24" onclick="selectColor(this)" style="width:28px;height:28px;border-radius:50%;background:#fbbf24;cursor:pointer;"></div>
-      <div class="color-opt" data-color="#f472b6" onclick="selectColor(this)" style="width:28px;height:28px;border-radius:50%;background:#f472b6;cursor:pointer;"></div>
-      <div class="color-opt" data-color="#2dd4bf" onclick="selectColor(this)" style="width:28px;height:28px;border-radius:50%;background:#2dd4bf;cursor:pointer;"></div>
-      <div class="color-opt" data-color="#fb923c" onclick="selectColor(this)" style="width:28px;height:28px;border-radius:50%;background:#fb923c;cursor:pointer;"></div>
-      <div class="color-opt" data-color="#a78bfa" onclick="selectColor(this)" style="width:28px;height:28px;border-radius:50%;background:#a78bfa;cursor:pointer;"></div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('modal-new-project')">Cancelar</button>
-      <button class="btn btn-primary" onclick="createProject()">Crear proyecto</button>
+    <div class="msub">Configura los detalles básicos</div>
+    <div class="field"><label>Nombre</label><input id="np-name" placeholder="ej. BIROB Tomo I"/></div>
+    <div class="field"><label>Descripción</label><textarea id="np-desc" placeholder="Breve descripción…"></textarea></div>
+    <div class="field"><label>Color</label><div class="color-row" id="np-colors"></div></div>
+    <div class="mactions">
+      <button class="btn btn-ghost" onclick="closeModal('m-new-project')">Cancelar</button>
+      <button class="btn btn-primary" onclick="createProject()">Crear</button>
     </div>
   </div>
 </div>
 
-<!-- Import CSV Modal -->
-<div class="modal-overlay" id="modal-import">
-  <div class="modal">
+<!-- EDIT PROJECT -->
+<div class="overlay" id="m-edit-project">
+  <div class="modal" style="max-width:430px;">
+    <h3>Editar proyecto</h3>
+    <div class="field"><label>Nombre</label><input id="ep-name"/></div>
+    <div class="field"><label>Descripción</label><textarea id="ep-desc"></textarea></div>
+    <div class="field"><label>Color</label><div class="color-row" id="ep-colors"></div></div>
+    <div class="mactions">
+      <button class="btn btn-ghost" onclick="closeModal('m-edit-project')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEditProject()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT CSV -->
+<div class="overlay" id="m-import">
+  <div class="modal" style="max-width:460px;">
     <h3>Importar CSV</h3>
-    <div class="modal-sub">El CSV debe tener: Fecha Entrega, Semana, y una columna por persona</div>
+    <div class="msub">Columnas: Fecha Entrega, Semana, [Persona1], [Persona2]…</div>
     <div class="file-drop" id="file-drop" onclick="document.getElementById('csv-input').click()"
          ondragover="event.preventDefault();this.classList.add('drag')"
-         ondragleave="this.classList.remove('drag')"
-         ondrop="handleDrop(event)">
+         ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event)">
       <div class="fd-icon">📄</div>
-      <div>Arrastra tu CSV aquí o <span style="color:var(--accent)">haz clic para elegir</span></div>
-      <div style="font-size:.75rem;color:var(--text3);margin-top:6px;">Guía_de_Trabajo_-_General.csv</div>
+      <div>Arrastra tu CSV aquí o <span style="color:var(--accent)">haz clic</span></div>
+      <div style="font-size:.72rem;color:var(--text3);margin-top:4px;">Guía_de_Trabajo_-_General.csv</div>
     </div>
     <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="handleCSVFile(this.files[0])">
-    <div id="csv-preview" style="display:none;margin-top:14px;">
-      <label>Nombre del proyecto</label>
-      <input id="imp-name" type="text" placeholder="Nombre del proyecto" />
+    <div id="csv-preview" style="display:none;margin-top:12px;">
+      <div style="font-size:.8rem;color:var(--text2);background:var(--surface2);border-radius:8px;padding:10px 12px;" id="csv-summary"></div>
+      <div class="field" style="margin-top:10px;">
+        <label>¿Qué hacer con el cronograma actual?</label>
+        <select id="imp-mode">
+          <option value="replace">Reemplazar todo</option>
+          <option value="append">Añadir semanas al final</option>
+        </select>
+      </div>
     </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('modal-import')">Cancelar</button>
-      <button class="btn btn-primary" id="imp-btn" style="display:none" onclick="importProject()">Importar</button>
+    <div class="mactions">
+      <button class="btn btn-ghost" onclick="closeModal('m-import')">Cancelar</button>
+      <button class="btn btn-primary" id="imp-btn" style="display:none" onclick="importCSV()">Importar</button>
     </div>
   </div>
 </div>
 
-<!-- Settings Modal -->
-<div class="modal-overlay" id="modal-settings">
+<!-- SETTINGS -->
+<div class="overlay" id="m-settings">
   <div class="modal" style="max-width:520px;">
     <h3>⚙ Configurar equipo</h3>
-    <div class="modal-sub">Asigna correos a cada persona para agendar en Google Calendar</div>
+    <div class="msub">Asigna correos para Google Calendar</div>
     <div id="members-list"></div>
-    <div style="display:flex;gap:8px;margin-top:4px;">
-      <input id="add-member-name" type="text" placeholder="Nombre (como en CSV)" style="margin-bottom:0;flex:1;" />
-      <input id="add-member-email" type="email" placeholder="correo@ejemplo.com" style="margin-bottom:0;flex:2;" />
-      <button class="btn btn-primary" onclick="addMember()" style="padding:8px 14px;white-space:nowrap;">+ Añadir</button>
+    <div style="display:flex;gap:7px;margin-top:4px;flex-wrap:wrap;">
+      <input id="add-m-name" type="text" placeholder="Nombre" style="flex:1;min-width:100px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.86rem;padding:7px 10px;outline:none;"/>
+      <input id="add-m-email" type="email" placeholder="correo@ejemplo.com" style="flex:2;min-width:150px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.86rem;padding:7px 10px;outline:none;"/>
+      <button class="btn btn-primary btn-sm" onclick="addMember()">+ Añadir</button>
     </div>
     <div class="divider"></div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('modal-settings')">Cancelar</button>
+    <div class="mactions">
+      <button class="btn btn-ghost" onclick="closeModal('m-settings')">Cancelar</button>
       <button class="btn btn-primary" onclick="saveSettings()">Guardar</button>
     </div>
   </div>
 </div>
 
-<!-- Task Detail Modal -->
-<div class="modal-overlay" id="modal-task">
-  <div class="modal">
-    <h3 id="task-modal-title">Tarea</h3>
-    <div id="task-modal-body"></div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('modal-task')">Cerrar</button>
-      <button class="btn btn-teal" id="task-cal-btn">📅 Agendar en Calendar</button>
+<!-- EDIT WEEK -->
+<div class="overlay" id="m-edit-week">
+  <div class="modal" style="max-width:400px;">
+    <h3>Editar semana</h3>
+    <div class="msub">Al cambiar la fecha, las semanas siguientes se recalculan automáticamente (+7 días por semana).</div>
+    <div class="field"><label>Etiqueta</label><input id="ew-label" placeholder="ej. Semana 3"/></div>
+    <div class="field"><label>Fecha de entrega</label><input id="ew-date" type="date"/></div>
+    <div class="mactions">
+      <button class="btn btn-ghost" onclick="closeModal('m-edit-week')">Cancelar</button>
+      <button class="btn btn-red btn-sm" onclick="deleteWeek()">🗑 Eliminar semana</button>
+      <button class="btn btn-primary" onclick="saveWeek()">Guardar</button>
     </div>
   </div>
 </div>
 
-<!-- TOAST -->
-<div id="toast"><span class="t-icon">✓</span><span id="toast-msg"></span></div>
+<!-- TASK DETAIL / EDIT -->
+<div class="overlay" id="m-task">
+  <div class="modal" style="max-width:500px;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px;">
+      <div>
+        <h3 id="tm-title" style="font-size:1.1rem;"></h3>
+        <div style="color:var(--text2);font-size:.79rem;margin-top:3px;" id="tm-meta"></div>
+      </div>
+      <span id="tm-status"></span>
+    </div>
+    <div class="info-grid" id="tm-info"></div>
+    <div class="field" style="margin-bottom:10px;">
+      <label>Tarea (editar)</label>
+      <input id="tm-task-inp"/>
+    </div>
+    <div>
+      <div style="font-size:.78rem;color:var(--text2);font-weight:500;margin-bottom:6px;">Subtareas</div>
+      <div class="sub-list" id="tm-subs"></div>
+      <div class="sub-add-row">
+        <input class="sub-inp" id="sub-new" type="text" placeholder="Nueva subtarea…" onkeydown="if(event.key==='Enter')addSubtask()"/>
+        <button class="btn btn-ghost btn-sm" onclick="addSubtask()">+ Añadir</button>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="mactions">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('m-task')">Cerrar</button>
+      <button class="btn btn-red btn-sm" onclick="deleteTask()">🗑 Eliminar</button>
+      <button class="btn btn-ghost btn-sm" onclick="saveTaskEdit()">💾 Guardar</button>
+      <button class="btn btn-teal btn-sm" id="tm-cal-btn">📅 Agendar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD TASK -->
+<div class="overlay" id="m-add-task">
+  <div class="modal" style="max-width:390px;">
+    <h3>Nueva tarea</h3>
+    <div class="msub" id="at-meta"></div>
+    <div class="field"><label>Descripción</label><input id="at-task" placeholder="ej. Diseño Tomo II (4 Cursos)" onkeydown="if(event.key==='Enter')saveNewTask()"/></div>
+    <div class="mactions">
+      <button class="btn btn-ghost" onclick="closeModal('m-add-task')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveNewTask()">Crear tarea</button>
+    </div>
+  </div>
+</div>
+
+<!-- INVITE COLLABORATOR -->
+<div class="overlay" id="m-invite">
+  <div class="modal" style="max-width:460px;">
+    <h3>👤 Invitar colaborador</h3>
+    <div class="msub">El colaborador recibirá el enlace por Calendar y el archivo Drive se compartirá automáticamente con él.</div>
+
+    <!-- Shareable link -->
+    <div style="margin-bottom:14px;">
+      <div style="font-size:.78rem;color:var(--text2);font-weight:500;margin-bottom:5px;">Enlace directo al proyecto</div>
+      <div style="display:flex;gap:7px;">
+        <input id="collab-share-link" readonly style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text2);font-family:'DM Sans',sans-serif;font-size:.78rem;padding:7px 10px;outline:none;"/>
+        <button class="btn btn-ghost btn-sm" onclick="copyShareLink()" title="Copiar enlace">⎘ Copiar</button>
+      </div>
+    </div>
+
+    <div id="collab-list"></div>
+    <div class="field" style="margin-top:8px;">
+      <label>Invitar por correo (Google Calendar + Drive)</label>
+      <div style="display:flex;gap:8px;">
+        <input id="inv-email" type="email" placeholder="colega@gmail.com" style="flex:1;" onkeydown="if(event.key==='Enter')addCollaborator()"/>
+        <button class="btn btn-primary btn-sm" onclick="addCollaborator()">Invitar</button>
+      </div>
+    </div>
+    <div style="font-size:.74rem;color:var(--text3);margin-top:6px;line-height:1.5;">
+      Al invitar: (1) se guarda el proyecto en tu Drive bajo la carpeta <b>PlanOS/</b>, (2) se comparte ese archivo con el colaborador, (3) reciben una invitación por Calendar con el enlace.
+    </div>
+    <div class="mactions"><button class="btn btn-ghost" onclick="closeModal('m-invite')">Cerrar</button></div>
+  </div>
+</div>
+
+<div id="toast"><span id="t-icon">✓</span> <span id="t-msg"></span></div>
 
 <script>
-// ══════════════════════════════════════════
-//  CONFIG
-// ══════════════════════════════════════════
-const CLIENT_ID = '147141081595-mtlv4l70drmlb50aae44bso40kr02n9o.apps.googleusercontent.com';
-const SCOPES = 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive.file profile email';
+// ══════════════════════════════
+// CONSTANTS
+// ══════════════════════════════
+const CLIENT_ID='147141081595-mtlv4l70drmlb50aae44bso40kr02n9o.apps.googleusercontent.com';
+const SCOPES='https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive.file profile email';
+const PC=['#5b7fff','#3dcc78','#f5c542','#e86cad','#26d4b8','#f5894a','#9b72ff','#f06060'];
+const PROJ_C=['#5b7fff','#3dcc78','#26d4b8','#9b72ff','#f5894a','#e86cad','#f5c542'];
 
-const PERSON_COLORS = ['#6c8cff','#4ade80','#fbbf24','#f472b6','#2dd4bf','#fb923c','#a78bfa','#f87171'];
-const PROJECT_COLORS = ['#6c8cff','#4ade80','#fbbf24','#2dd4bf','#a78bfa','#fb923c'];
+// ══════════════════════════════
+// STATE
+// ══════════════════════════════
+let S={user:null,token:null,projects:[],active:null,driveFolderId:null,selColor:PROJ_C[0],pendingCSV:null,editWeekIdx:null,taskCtx:null,addTaskCtx:null};
 
-// ── STATE ──
-let state = {
-  user: null,
-  accessToken: null,
-  projects: [],       // [{id, name, desc, color, members:{name:email}, weeks:[{week,date,tasks:{person:label}}], createdAt}]
-  activeProject: null,
-  driveBackupFileId: null,
-  pendingCSV: null,
-  pendingColor: PROJECT_COLORS[0],
-};
-
-// ══════════════════════════════════════════
-//  AUTH
-// ══════════════════════════════════════════
-function handleLogin() {
-  const client = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID,
-    scope: SCOPES,
-    callback: async (resp) => {
-      if (resp.error) { toast('Error de autenticación: ' + resp.error, '❌'); return; }
-      state.accessToken = resp.access_token;
-      await fetchUserInfo();
-      await loadFromDrive();
+// ══════════════════════════════
+// AUTH
+// ══════════════════════════════
+function handleLogin(){
+  google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:SCOPES,
+    callback:async r=>{
+      if(r.error){toast('Error: '+r.error,'❌');return;}
+      S.token=r.access_token;
+      await fetchUser();
+      await loadDrive();
       showHome();
     }
-  });
-  client.requestAccessToken();
+  }).requestAccessToken();
+}
+async function fetchUser(){
+  const r=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+S.token}});
+  S.user=await r.json();
+  document.getElementById('auth-area').innerHTML=`<div id="user-pill" onclick="if(confirm('¿Cerrar sesión?'))location.reload()">
+    <img src="${S.user.picture||''}" onerror="this.style.display='none'"/>
+    <div><div class="uname">${esc(S.user.name||S.user.email)}</div><div class="uemail">${esc(S.user.email)}</div></div>
+  </div>`;
+  const h=new Date().getHours(),g=h<12?'Buenos días':h<18?'Buenas tardes':'Buenas noches';
+  const n=(S.user.given_name||S.user.name||'').split(' ')[0];
+  document.getElementById('welcome-title').textContent=`${g}, ${n} 👋`;
 }
 
-async function fetchUserInfo() {
-  try {
-    const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: 'Bearer ' + state.accessToken }
-    });
-    state.user = await r.json();
-    renderTopBar();
-  } catch(e) { console.error(e); }
+// ══════════════════════════════
+// SCREENS
+// ══════════════════════════════
+function showHome(){
+  show('splash',false);show('home',true);show('project-view',false);S.active=null;renderProjects();
 }
-
-function renderTopBar() {
-  const area = document.getElementById('auth-area');
-  if (!state.user) return;
-  area.innerHTML = `
-    <div id="user-pill" onclick="confirmLogout()">
-      <img src="${state.user.picture || ''}" onerror="this.style.display='none'" />
-      <div>
-        <div class="name">${state.user.name || state.user.email}</div>
-        <div class="email">${state.user.email}</div>
-      </div>
-    </div>`;
-  // Welcome
-  const h = new Date().getHours();
-  const greet = h < 12 ? 'Buenos días' : h < 18 ? 'Buenas tardes' : 'Buenas noches';
-  const name = (state.user.given_name || state.user.name || '').split(' ')[0];
-  document.getElementById('welcome-title').textContent = `${greet}, ${name} 👋`;
-}
-
-function confirmLogout() {
-  if (confirm('¿Cerrar sesión?')) { state.user = null; state.accessToken = null; location.reload(); }
-}
-
-// ══════════════════════════════════════════
-//  SCREENS
-// ══════════════════════════════════════════
-function showHome() {
-  document.getElementById('splash').style.display = 'none';
-  document.getElementById('home').style.display = 'block';
-  document.getElementById('project-view').style.display = 'none';
-  renderProjects();
-}
-
-function showProject(id) {
-  const p = state.projects.find(x => x.id === id);
-  if (!p) return;
-  state.activeProject = id;
-  document.getElementById('home').style.display = 'none';
-  document.getElementById('project-view').style.display = 'block';
-  document.getElementById('pv-title').textContent = p.name;
-  document.getElementById('pv-meta').textContent = p.desc || '';
+function showProject(id){
+  const p=proj(id);if(!p)return;
+  S.active=id;show('home',false);show('project-view',true);
+  document.getElementById('pv-title').textContent=p.name;
+  document.getElementById('pv-sub').textContent=p.desc||'';
   renderGantt(p);
 }
+function show(id,v){document.getElementById(id).style.display=v?'block':'none';}
 
-// ══════════════════════════════════════════
-//  PROJECTS
-// ══════════════════════════════════════════
-function renderProjects() {
-  const grid = document.getElementById('projects-grid');
-  grid.innerHTML = '';
-  state.projects.forEach(p => {
-    const members = Object.keys(p.members || {});
-    const total = p.weeks.reduce((a, w) => a + Object.values(w.tasks).filter(t=>t).length, 0);
-    const done  = p.weeks.filter(w => new Date(w.date) < new Date()).reduce((a, w) => a + Object.values(w.tasks).filter(t=>t).length, 0);
-    const pct   = total > 0 ? Math.round(done/total*100) : 0;
-    const card  = document.createElement('div');
-    card.className = 'project-card';
-    card.style.setProperty('--card-accent', p.color || '#6c8cff');
-    card.onclick = () => showProject(p.id);
-    card.innerHTML = `
-      <div class="pc-name">${p.name}</div>
-      <div class="pc-meta">${p.weeks.length} semanas · ${total} tareas · <span class="badge" style="background:rgba(108,140,255,.1);color:${p.color}">${pct}%</span></div>
-      <div class="pc-progress"><div class="pc-progress-fill" style="width:${pct}%;background:${p.color}"></div></div>
-      <div class="pc-members">${members.slice(0,5).map(n=>`<div class="avatar" style="background:${stringColor(n)}">${initials(n)}</div>`).join('')}</div>
-    `;
-    grid.appendChild(card);
+// ══════════════════════════════
+// PROJECTS LIST
+// ══════════════════════════════
+function renderProjects(){
+  const g=document.getElementById('projects-grid');g.innerHTML='';
+  S.projects.forEach(p=>{
+    const ppl=people(p);
+    const total=p.weeks.flatMap(w=>Object.values(w.tasks).filter(t=>t?.label)).length;
+    const done=p.weeks.filter(w=>toD(w.date)<new Date()).flatMap(w=>Object.values(w.tasks).filter(t=>t?.label)).length;
+    const pct=total?Math.round(done/total*100):0;
+    const c=document.createElement('div');
+    c.className='project-card';c.style.setProperty('--card-color',p.color||PC[0]);
+    c.innerHTML=`<div class="pc-top"><div class="pc-name">${esc(p.name)}</div>
+      <button class="pc-menu-btn" onclick="event.stopPropagation();openEditProjectModal('${p.id}')">⋯</button></div>
+      <div class="pc-meta">${p.weeks.length} sem · ${total} tareas · <b style="color:${p.color}">${pct}%</b></div>
+      <div class="pc-prog"><div class="pc-prog-fill" style="width:${pct}%;background:${p.color}"></div></div>
+      <div class="pc-footer">
+        <div class="avatars">${ppl.slice(0,5).map(n=>`<div class="av" style="background:${pCol(n)};color:#fff">${ini(n)}</div>`).join('')}</div>
+        <div style="font-size:.72rem;color:var(--text3)">${fmtS(p.weeks[0]?.date||'')} → ${fmtS(p.weeks[p.weeks.length-1]?.date||'')}</div>
+      </div>`;
+    c.onclick=e=>{if(e.target.classList.contains('pc-menu-btn'))return;showProject(p.id);};
+    g.appendChild(c);
   });
-  // New card last
-  const nc = document.createElement('div');
-  nc.className = 'new-project-card';
-  nc.innerHTML = '<span style="font-size:1.4rem">＋</span> Nuevo proyecto';
-  nc.onclick = openNewProjectModal;
-  grid.appendChild(nc);
+  const nc=document.createElement('div');nc.className='add-proj-card';
+  nc.innerHTML='<span style="font-size:1.3rem">＋</span> Nuevo proyecto';
+  nc.onclick=()=>openModal('m-new-project');
+  g.appendChild(nc);
 }
 
-// ══════════════════════════════════════════
-//  GANTT
-// ══════════════════════════════════════════
-function renderGantt(p) {
-  const people = getPersonList(p);
-  const weeks  = p.weeks;
+// ══════════════════════════════
+// COLOR PICKER
+// ══════════════════════════════
+function buildColors(containerId,target){
+  const c=document.getElementById(containerId);
+  c.innerHTML=PROJ_C.map(col=>`<div class="col-swatch${S.selColor===col?' sel':''}" style="background:${col}" onclick="pickCol(this,'${col}','${target}')"></div>`).join('');
+}
+function pickCol(el,col,target){
+  S.selColor=col;
+  document.querySelectorAll(`#${target==='np'?'np-colors':'ep-colors'} .col-swatch`).forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');
+}
 
-  // Stats
-  const total = weeks.reduce((a,w)=>a+Object.values(w.tasks).filter(t=>t).length,0);
-  const now = new Date();
-  const done = weeks.filter(w=>new Date(w.date)<=now).reduce((a,w)=>a+Object.values(w.tasks).filter(t=>t).length,0);
-  const remaining = total - done;
-  const pct = total > 0 ? Math.round(done/total*100) : 0;
-  document.getElementById('pv-stats').innerHTML = `
-    <div class="progress-stat"><div class="ps-num">${people.length}</div><div class="ps-label">Personas</div></div>
-    <div class="progress-stat"><div class="ps-num">${weeks.length}</div><div class="ps-label">Semanas</div></div>
-    <div class="progress-stat"><div class="ps-num">${total}</div><div class="ps-label">Tareas</div></div>
-    <div class="progress-stat"><div class="ps-num">${remaining}</div><div class="ps-label">Por completar</div></div>
-    <div class="big-progress">
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-        <span style="font-size:.8rem;color:var(--text2)">Progreso general</span>
-        <span style="font-size:.8rem;font-weight:600;color:var(--text)">${pct}%</span>
-      </div>
-      <div class="big-progress-bar"><div class="big-progress-fill" style="width:${pct}%"></div></div>
-    </div>`;
+// ══════════════════════════════
+// MODAL HELPERS
+// ══════════════════════════════
+function openModal(id){
+  if(id==='m-new-project'){S.selColor=PROJ_C[S.projects.length%PROJ_C.length];buildColors('np-colors','np');}
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');}));
 
-  // Legend
-  const legend = document.getElementById('gantt-legend');
-  legend.innerHTML = people.map((n,i)=>`
-    <div class="legend-item">
-      <div class="legend-dot" style="background:${PERSON_COLORS[i%PERSON_COLORS.length]}"></div>
-      <span>${n}</span>
-    </div>`).join('');
+// ══════════════════════════════
+// CREATE / EDIT / DELETE PROJECT
+// ══════════════════════════════
+function createProject(){
+  const name=document.getElementById('np-name').value.trim();if(!name){toast('Ingresa un nombre','⚠️');return;}
+  const p={id:uid(),name,desc:document.getElementById('np-desc').value.trim(),color:S.selColor,members:{},collaborators:[],weeks:[],createdAt:new Date().toISOString()};
+  S.projects.push(p);persist();closeModal('m-new-project');
+  document.getElementById('np-name').value='';document.getElementById('np-desc').value='';
+  showProject(p.id);toast('Proyecto creado ✅');
+}
+let _eProjId=null;
+function openEditProjectModal(id){
+  _eProjId=id||S.active;const p=proj(_eProjId);if(!p)return;
+  document.getElementById('ep-name').value=p.name;document.getElementById('ep-desc').value=p.desc||'';
+  S.selColor=p.color||PROJ_C[0];buildColors('ep-colors','ep');
+  openModal('m-edit-project');
+}
+function saveEditProject(){
+  const p=proj(_eProjId);if(!p)return;
+  p.name=document.getElementById('ep-name').value.trim()||p.name;
+  p.desc=document.getElementById('ep-desc').value.trim();p.color=S.selColor;
+  persist();closeModal('m-edit-project');
+  document.getElementById('pv-title').textContent=p.name;
+  document.getElementById('pv-sub').textContent=p.desc||'';
+  renderProjects();toast('Proyecto actualizado ✅');
+}
+function deleteProject(){
+  const p=getActive();if(!p)return;
+  if(!confirm(`¿Eliminar "${p.name}"? No se puede deshacer.`))return;
+  S.projects=S.projects.filter(x=>x.id!==p.id);persist();showHome();toast('Proyecto eliminado 🗑');
+}
 
-  // Table
-  const tbl = document.getElementById('gantt-table');
-  tbl.innerHTML = '';
+// ══════════════════════════════
+// CSV IMPORT
+// ══════════════════════════════
+function handleDrop(e){e.preventDefault();document.getElementById('file-drop').classList.remove('drag');const f=e.dataTransfer.files[0];if(f)handleCSVFile(f);}
+function handleCSVFile(file){
+  if(!file)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    S.pendingCSV=parseCSV(e.target.result);
+    document.getElementById('csv-summary').textContent=`Personas: ${S.pendingCSV.people.join(', ')} · ${S.pendingCSV.weeks.length} semanas`;
+    document.getElementById('csv-preview').style.display='block';
+    document.getElementById('imp-btn').style.display='inline-flex';
+    toast(`CSV: ${S.pendingCSV.weeks.length} semanas, ${S.pendingCSV.people.length} personas`,'📄');
+  };
+  r.readAsText(file);
+}
+function parseCSV(text){
+  text=text.replace(/^\uFEFF/,'');
+  const lines=text.split('\n').filter(l=>l.trim());
+  const headers=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+  const people=headers.slice(2);
+  const weeks=[];
+  for(let i=1;i<lines.length;i++){
+    const cols=splitLine(lines[i]);
+    if(!cols[0]&&!cols[1])continue;
+    const tasks={};
+    people.forEach((p,pi)=>{const v=(cols[pi+2]||'').trim();if(v)tasks[p]={label:v,subtasks:[]};});
+    weeks.push({id:uid(),week:cols[1]||`Semana ${i}`,date:cols[0]||'',tasks});
+  }
+  return{people,weeks};
+}
+function splitLine(line){
+  const res=[];let cur='',inQ=false;
+  for(const c of line){if(c==='"'){inQ=!inQ;}else if(c===','&&!inQ){res.push(cur.trim());cur='';}else cur+=c;}
+  res.push(cur.trim());return res;
+}
+function importCSV(){
+  if(!S.pendingCSV)return;
+  const p=getActive();if(!p)return;
+  const mode=document.getElementById('imp-mode').value;
+  S.pendingCSV.people.forEach(n=>{if(!p.members[n])p.members[n]='';});
+  if(mode==='replace')p.weeks=S.pendingCSV.weeks;
+  else p.weeks=[...p.weeks,...S.pendingCSV.weeks];
+  S.pendingCSV=null;persist();closeModal('m-import');
+  document.getElementById('csv-preview').style.display='none';
+  document.getElementById('imp-btn').style.display='none';
+  renderGantt(p);toast('CSV importado ✅');
+}
 
-  // Header row 1: person column + week labels
-  const thead = document.createElement('thead');
-  let tr1 = '<tr><th style="min-width:130px;position:sticky;left:0;z-index:3;background:var(--surface2);">Persona</th>';
-  weeks.forEach(w => {
-    const isPast = new Date(w.date) < now;
-    tr1 += `<th class="week-header" style="${isPast?'opacity:.5':''}">
-      ${w.week}<br><span style="font-size:.7rem;font-weight:400;color:var(--text3)">${formatDate(w.date)}</span>
-    </th>`;
-  });
-  tr1 += '</tr>';
-  thead.innerHTML = tr1;
-  tbl.appendChild(thead);
-
-  // Body
-  const tbody = document.createElement('tbody');
-  people.forEach((person, pi) => {
-    const color = PERSON_COLORS[pi % PERSON_COLORS.length];
-    const email = (p.members || {})[person] || '';
-    const tr = document.createElement('tr');
-    let html = `<td class="person-cell">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <div class="avatar" style="background:${color};color:#fff;border-color:var(--surface)">${initials(person)}</div>
-        <div>
-          <div>${person}</div>
-          ${email ? `<div class="p-email">${email}</div>` : '<div class="p-email" style="color:var(--text3);font-style:italic;">sin correo</div>'}
-        </div>
-      </div>
-    </td>`;
-    weeks.forEach((w, wi) => {
-      const task = w.tasks[person] || '';
-      const isPast = new Date(w.date) < now;
-      if (task) {
-        html += `<td class="task-cell">
-          <div class="task-block" style="--tb-color:${color};opacity:${isPast?'.6':'1'}"
-               onclick="openTaskModal('${escAttr(person)}','${escAttr(task)}','${escAttr(w.week)}','${escAttr(w.date)}','${escAttr(email)}','${escAttr(color)}')"
-               title="${task}">
-            ${isPast?'✓ ':''}${task}
-          </div>
-        </td>`;
-      } else {
-        html += `<td class="task-cell"><div class="task-block empty"></div></td>`;
+// ══════════════════════════════
+// WEEKS
+// ══════════════════════════════
+function addWeek(){
+  const p=getActive();if(!p)return;
+  const last=p.weeks[p.weeks.length-1];
+  let d='';
+  if(last?.date){const dt=toD(last.date);dt.setDate(dt.getDate()+7);d=fromD(dt);}
+  p.weeks.push({id:uid(),week:`Semana ${p.weeks.length}`,date:d,tasks:{}});
+  persist();renderGantt(p);toast('Semana añadida ✅');
+}
+function openEditWeek(idx){
+  S.editWeekIdx=idx;const p=getActive();if(!p)return;
+  const w=p.weeks[idx];
+  document.getElementById('ew-label').value=w.week;
+  document.getElementById('ew-date').value=toInputDate(w.date);
+  openModal('m-edit-week');
+}
+function saveWeek(){
+  const p=getActive();if(!p)return;
+  const idx=S.editWeekIdx;const w=p.weeks[idx];
+  const oldD=toD(w.date);
+  const newStr=document.getElementById('ew-date').value;
+  w.week=document.getElementById('ew-label').value.trim()||w.week;
+  if(newStr){
+    const newD=new Date(newStr+'T12:00:00');
+    const diff=newD-oldD;
+    w.date=fromD(newD);
+    // Cascade subsequent weeks
+    for(let i=idx+1;i<p.weeks.length;i++){
+      if(p.weeks[i].date){
+        p.weeks[i].date=fromD(new Date(toD(p.weeks[i].date).getTime()+diff));
       }
+    }
+  }
+  persist();closeModal('m-edit-week');renderGantt(p);toast('Semana actualizada ✅');
+}
+function deleteWeek(){
+  const p=getActive();if(!p)return;
+  const w=p.weeks[S.editWeekIdx];
+  if(!confirm(`¿Eliminar "${w.week}"?`))return;
+  p.weeks.splice(S.editWeekIdx,1);persist();closeModal('m-edit-week');renderGantt(p);toast('Semana eliminada 🗑');
+}
+
+// ══════════════════════════════
+// GANTT
+// ══════════════════════════════
+function renderGantt(p){
+  const ppl=people(p),weeks=p.weeks,now=new Date();
+  // Stats
+  const all=weeks.flatMap(w=>Object.values(w.tasks).filter(t=>t?.label));
+  const total=all.length;
+  const done=weeks.filter(w=>toD(w.date)<=now).flatMap(w=>Object.values(w.tasks).filter(t=>t?.label)).length;
+  const pct=total?Math.round(done/total*100):0;
+  const subs=all.reduce((a,t)=>a+(t.subtasks?.length||0),0);
+  document.getElementById('pv-stats').innerHTML=`
+    <div class="stat"><div class="stat-n">${ppl.length}</div><div class="stat-l">Personas</div></div>
+    <div class="stat"><div class="stat-n">${weeks.length}</div><div class="stat-l">Semanas</div></div>
+    <div class="stat"><div class="stat-n">${total}</div><div class="stat-l">Tareas</div></div>
+    <div class="stat"><div class="stat-n">${subs}</div><div class="stat-l">Subtareas</div></div>
+    <div class="stat-prog">
+      <div class="sp-row"><span style="color:var(--text2)">Progreso</span><span style="font-weight:600">${pct}%</span></div>
+      <div class="sp-bar"><div class="sp-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  document.getElementById('gantt-legend').innerHTML=ppl.map((n,i)=>`
+    <div class="leg-item"><div class="leg-dot" style="background:${PC[i%PC.length]}"></div>${esc(n)}</div>`).join('');
+  // Table
+  const tbl=document.getElementById('gantt-table');tbl.innerHTML='';
+  const thead=document.createElement('thead');
+  const tr=document.createElement('tr');
+  const th0=document.createElement('th');
+  th0.style.cssText='min-width:140px;position:sticky;left:0;z-index:3;background:var(--surface2);';
+  th0.textContent='Persona';tr.appendChild(th0);
+  weeks.forEach((w,wi)=>{
+    const past=toD(w.date)<now;
+    const today=Math.abs(toD(w.date)-now)<7*86400000;
+    const th=document.createElement('th');
+    th.className='wh'+(past?' past':'')+(today?' today':'');
+    th.innerHTML=`<div class="wh-label">${esc(w.week)}</div><div class="wh-date">${fmtS(w.date)}</div><span class="wh-edit">✏</span>`;
+    th.onclick=()=>openEditWeek(wi);tr.appendChild(th);
+  });
+  thead.appendChild(tr);tbl.appendChild(thead);
+  const tbody=document.createElement('tbody');
+  ppl.forEach((person,pi)=>{
+    const color=PC[pi%PC.length];
+    const email=(p.members||{})[person]||'';
+    const row=document.createElement('tr');
+    const td0=document.createElement('td');td0.className='person-cell';
+    td0.innerHTML=`<div style="display:flex;align-items:center;gap:7px;">
+      <div class="av" style="background:${color};color:#fff;border-color:var(--surface)">${ini(person)}</div>
+      <div><div>${esc(person)}</div><div class="pc-em">${esc(email)||'sin correo'}</div></div>
+    </div>`;
+    row.appendChild(td0);
+    weeks.forEach((w,wi)=>{
+      const task=w.tasks[person];
+      const td=document.createElement('td');td.className='task-cell';
+      if(task?.label){
+        const past=toD(w.date)<now;
+        const block=document.createElement('div');
+        block.className='task-block'+(task.subtasks?.length?' has-sub':'')+(past?' done':'');
+        block.style.setProperty('--tb',color);
+        block.title=task.label;
+        block.innerHTML=`<span style="overflow:hidden;text-overflow:ellipsis;flex:1">${past?'✓ ':''}${esc(task.label)}</span>`;
+        block.onclick=()=>openTaskModal(person,wi,w,color,email,p);
+        td.appendChild(block);
+      } else {
+        const add=document.createElement('button');add.className='add-task-btn';add.title='Añadir tarea';add.textContent='+';
+        add.onclick=()=>openAddTask(person,wi,w);td.appendChild(add);
+      }
+      row.appendChild(td);
     });
-    tr.innerHTML = html;
-    tbody.appendChild(tr);
+    tbody.appendChild(row);
   });
   tbl.appendChild(tbody);
 }
-
-function getPersonList(p) {
-  const set = new Set();
-  p.weeks.forEach(w => Object.keys(w.tasks).forEach(k => set.add(k)));
-  return [...set];
+function people(p){
+  const s=new Set(Object.keys(p.members||{}));
+  p.weeks.forEach(w=>Object.keys(w.tasks).forEach(k=>s.add(k)));
+  return[...s];
 }
 
-// ══════════════════════════════════════════
-//  MODALS
-// ══════════════════════════════════════════
-function openNewProjectModal() {
-  if (!state.user) { handleLogin(); return; }
-  openModal('modal-new-project');
+// ══════════════════════════════
+// TASK MODAL
+// ══════════════════════════════
+function openTaskModal(person,weekIdx,w,color,email,p){
+  S.taskCtx={person,weekIdx};
+  const task=w.tasks[person];
+  const past=toD(w.date)<new Date();
+  document.getElementById('tm-title').textContent=task.label;
+  document.getElementById('tm-meta').textContent=`${person}  ·  ${w.week}`;
+  document.getElementById('tm-status').innerHTML=past
+    ?'<span class="status-badge s-done">✓ Completado</span>'
+    :'<span class="status-badge s-pending">⏳ Pendiente</span>';
+  document.getElementById('tm-info').innerHTML=`
+    <div class="info-cell"><div class="ic-label">Semana</div><div class="ic-val">${esc(w.week)}</div></div>
+    <div class="info-cell"><div class="ic-label">Fecha</div><div class="ic-val">${fmtF(w.date)}</div></div>
+    <div class="info-cell"><div class="ic-label">Responsable</div><div class="ic-val">${esc(person)}</div></div>
+    <div class="info-cell"><div class="ic-label">Correo</div><div class="ic-val" style="font-size:.76rem">${esc(email)||'—'}</div></div>`;
+  document.getElementById('tm-task-inp').value=task.label;
+  renderSubs(task);
+  document.getElementById('tm-cal-btn').onclick=()=>scheduleOne({person,task:task.label,week:w.week,date:w.date,email});
+  openModal('m-task');
 }
-function openImportModal() {
-  if (!state.user) { handleLogin(); return; }
-  openModal('modal-import');
-}
-function openSettings() {
-  const p = getActive(); if (!p) return;
-  renderMembersList(p);
-  openModal('modal-settings');
-}
-
-function openModal(id) {
-  document.getElementById(id).classList.add('open');
-}
-function closeModal(id) {
-  document.getElementById(id).classList.remove('open');
-}
-document.querySelectorAll('.modal-overlay').forEach(el => {
-  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
-});
-
-function selectColor(el) {
-  document.querySelectorAll('.color-opt').forEach(e => e.style.border='2px solid transparent');
-  el.style.border = '2px solid white';
-  state.pendingColor = el.dataset.color;
-}
-
-function createProject() {
-  const name = document.getElementById('np-name').value.trim();
-  if (!name) { toast('Ingresa un nombre', '⚠️'); return; }
-  const p = {
-    id: uid(),
-    name,
-    desc: document.getElementById('np-desc').value.trim(),
-    color: state.pendingColor,
-    members: {},
-    weeks: [],
-    createdAt: new Date().toISOString()
-  };
-  state.projects.push(p);
-  saveState();
-  closeModal('modal-new-project');
-  document.getElementById('np-name').value = '';
-  document.getElementById('np-desc').value = '';
-  showProject(p.id);
-  toast('Proyecto creado', '✅');
-}
-
-// ══════════════════════════════════════════
-//  CSV IMPORT
-// ══════════════════════════════════════════
-function handleDrop(e) {
-  e.preventDefault();
-  document.getElementById('file-drop').classList.remove('drag');
-  const file = e.dataTransfer.files[0];
-  if (file) handleCSVFile(file);
-}
-
-function handleCSVFile(file) {
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const text = e.target.result;
-    const result = parseCSV(text);
-    state.pendingCSV = result;
-    document.getElementById('imp-name').value = file.name.replace('.csv','').replace(/_/g,' ');
-    document.getElementById('csv-preview').style.display = 'block';
-    document.getElementById('imp-btn').style.display = 'inline-flex';
-    toast(`CSV cargado: ${result.weeks.length} semanas, ${result.people.length} personas`, '📄');
-  };
-  reader.readAsText(file);
-}
-
-function parseCSV(text) {
-  // Remove BOM
-  text = text.replace(/^\uFEFF/, '');
-  const lines = text.split('\n').filter(l => l.trim());
-  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g,''));
-  // headers[0]=Fecha, [1]=Semana, [2..]=personas
-  const people = headers.slice(2);
-  const weeks = [];
-  for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g,''));
-    if (!cols[0] && !cols[1]) continue;
-    const tasks = {};
-    people.forEach((p, pi) => { if (cols[pi+2]) tasks[p] = cols[pi+2]; });
-    weeks.push({ week: cols[1] || `Semana ${i}`, date: cols[0] || '', tasks });
-  }
-  return { people, weeks };
-}
-
-function importProject() {
-  if (!state.pendingCSV) return;
-  const name = document.getElementById('imp-name').value.trim() || 'Proyecto importado';
-  const color = PROJECT_COLORS[state.projects.length % PROJECT_COLORS.length];
-  const members = {};
-  state.pendingCSV.people.forEach(p => members[p] = '');
-  // If user is logged in, map first person to self
-  if (state.user) members[state.pendingCSV.people[0]] = state.user.email;
-  const p = {
-    id: uid(),
-    name, desc: '',
-    color,
-    members,
-    weeks: state.pendingCSV.weeks,
-    createdAt: new Date().toISOString()
-  };
-  state.projects.push(p);
-  state.pendingCSV = null;
-  saveState();
-  closeModal('modal-import');
-  document.getElementById('csv-preview').style.display = 'none';
-  document.getElementById('imp-btn').style.display = 'none';
-  showProject(p.id);
-  toast('Proyecto importado exitosamente', '✅');
-}
-
-// ══════════════════════════════════════════
-//  SETTINGS / MEMBERS
-// ══════════════════════════════════════════
-function renderMembersList(p) {
-  const people = getPersonList(p);
-  // Merge people from CSV with existing members
-  people.forEach(n => { if (!p.members[n]) p.members[n] = ''; });
-  const list = document.getElementById('members-list');
-  list.innerHTML = Object.entries(p.members).map(([name, email]) => `
-    <div class="member-row" id="mr-${uid()}">
-      <div class="avatar-big" style="background:${stringColor(name)};color:#fff">${initials(name)}</div>
-      <div class="m-info">
-        <div class="m-name">${name}</div>
-        <input type="email" value="${email}" placeholder="correo@ejemplo.com"
-               style="background:transparent;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:2px 0;margin-bottom:0;font-size:.8rem;color:var(--text2);"
-               onchange="updateMemberEmail('${escAttr(name)}', this.value)"
-               onfocus="this.style.borderColor='var(--accent)'"
-               onblur="this.style.borderColor='var(--border)'" />
-      </div>
-      <button class="m-del" onclick="deleteMember('${escAttr(name)}')">✕</button>
+function renderSubs(task){
+  const subs=task.subtasks||[];
+  document.getElementById('tm-subs').innerHTML=subs.map(s=>`
+    <div class="sub-item">
+      <input type="checkbox" ${s.done?'checked':''} onchange="toggleSub('${s.id}')"/>
+      <span class="sub-text${s.done?' done-txt':''}">${esc(s.text)}</span>
+      <button class="sub-del" onclick="deleteSub('${s.id}')">✕</button>
     </div>`).join('');
 }
-
-function updateMemberEmail(name, email) {
-  const p = getActive(); if (!p) return;
-  p.members[name] = email;
+function addSubtask(){
+  const txt=document.getElementById('sub-new').value.trim();if(!txt)return;
+  const p=getActive();if(!p)return;
+  const{person,weekIdx}=S.taskCtx;
+  const task=p.weeks[weekIdx].tasks[person];
+  if(!task.subtasks)task.subtasks=[];
+  task.subtasks.push({id:uid(),text:txt,done:false});
+  document.getElementById('sub-new').value='';
+  renderSubs(task);persist();
+}
+function toggleSub(sid){
+  const p=getActive();if(!p)return;
+  const{person,weekIdx}=S.taskCtx;
+  const task=p.weeks[weekIdx].tasks[person];
+  const s=task.subtasks?.find(x=>x.id===sid);if(s){s.done=!s.done;renderSubs(task);persist();}
+}
+function deleteSub(sid){
+  const p=getActive();if(!p)return;
+  const{person,weekIdx}=S.taskCtx;
+  const task=p.weeks[weekIdx].tasks[person];
+  task.subtasks=(task.subtasks||[]).filter(x=>x.id!==sid);
+  renderSubs(task);persist();
+}
+function saveTaskEdit(){
+  const p=getActive();if(!p)return;
+  const{person,weekIdx}=S.taskCtx;
+  const lbl=document.getElementById('tm-task-inp').value.trim();
+  if(!lbl){toast('La tarea no puede estar vacía','⚠️');return;}
+  p.weeks[weekIdx].tasks[person].label=lbl;
+  persist();renderGantt(p);closeModal('m-task');toast('Tarea guardada ✅');
+}
+function deleteTask(){
+  const p=getActive();if(!p)return;
+  const{person,weekIdx}=S.taskCtx;
+  if(!confirm('¿Eliminar esta tarea?'))return;
+  delete p.weeks[weekIdx].tasks[person];
+  persist();renderGantt(p);closeModal('m-task');toast('Tarea eliminada 🗑');
+}
+// Add task (empty cell)
+function openAddTask(person,weekIdx,w){
+  S.addTaskCtx={person,weekIdx};
+  document.getElementById('at-meta').textContent=`${person}  ·  ${w.week}  ·  ${fmtS(w.date)}`;
+  document.getElementById('at-task').value='';
+  openModal('m-add-task');
+  setTimeout(()=>document.getElementById('at-task').focus(),100);
+}
+function saveNewTask(){
+  const txt=document.getElementById('at-task').value.trim();if(!txt){toast('Ingresa una descripción','⚠️');return;}
+  const p=getActive();if(!p)return;
+  const{person,weekIdx}=S.addTaskCtx;
+  p.weeks[weekIdx].tasks[person]={label:txt,subtasks:[]};
+  persist();renderGantt(p);closeModal('m-add-task');toast('Tarea añadida ✅');
 }
 
-function deleteMember(name) {
-  const p = getActive(); if (!p) return;
-  delete p.members[name];
-  renderMembersList(p);
+// ══════════════════════════════
+// SETTINGS
+// ══════════════════════════════
+function openSettings(){
+  const p=getActive();if(!p)return;
+  people(p).forEach(n=>{if(p.members[n]===undefined)p.members[n]='';});
+  renderMembers(p);openModal('m-settings');
 }
-
-function addMember() {
-  const name  = document.getElementById('add-member-name').value.trim();
-  const email = document.getElementById('add-member-email').value.trim();
-  if (!name) { toast('Ingresa un nombre', '⚠️'); return; }
-  const p = getActive(); if (!p) return;
-  p.members[name] = email;
-  renderMembersList(p);
-  document.getElementById('add-member-name').value = '';
-  document.getElementById('add-member-email').value = '';
-}
-
-function saveSettings() {
-  saveState();
-  closeModal('modal-settings');
-  const p = getActive(); if (p) renderGantt(p);
-  toast('Configuración guardada', '✅');
-}
-
-// ══════════════════════════════════════════
-//  TASK MODAL
-// ══════════════════════════════════════════
-let _currentTask = null;
-function openTaskModal(person, task, week, date, email, color) {
-  _currentTask = { person, task, week, date, email, color };
-  document.getElementById('task-modal-title').textContent = task;
-  const isPast = new Date(date) < new Date();
-  document.getElementById('task-modal-body').innerHTML = `
-    <div style="display:grid;gap:10px;margin-bottom:16px;">
-      <div style="display:flex;gap:12px;align-items:center;">
-        <div class="avatar" style="background:${color};color:#fff;width:34px;height:34px;font-size:.85rem;">${initials(person)}</div>
-        <div>
-          <div style="font-weight:600;">${person}</div>
-          <div style="font-size:.78rem;color:var(--text2)">${email || 'Sin correo asignado'}</div>
-        </div>
+function renderMembers(p){
+  document.getElementById('members-list').innerHTML=Object.entries(p.members).map(([n,e])=>`
+    <div class="member-row">
+      <div class="mbig" style="background:${pCol(n)};color:#fff">${ini(n)}</div>
+      <div class="m-info">
+        <div class="m-name">${esc(n)}</div>
+        <input class="m-email-inp" type="email" value="${esc(e)}" placeholder="correo@ejemplo.com" onchange="updEmail('${escA(n)}',this.value)"/>
       </div>
-      <div style="background:var(--surface2);border-radius:8px;padding:12px;display:flex;gap:16px;">
-        <div><div style="font-size:.72rem;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;">Semana</div>
-          <div style="font-weight:500;margin-top:2px;">${week}</div></div>
-        <div><div style="font-size:.72rem;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;">Fecha entrega</div>
-          <div style="font-weight:500;margin-top:2px;">${formatDateFull(date)}</div></div>
-        <div><div style="font-size:.72rem;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;">Estado</div>
-          <div style="font-weight:500;margin-top:2px;color:${isPast?'var(--green)':'var(--yellow)'}">
-            ${isPast?'✓ Completado':'⏳ Pendiente'}</div></div>
-      </div>
-    </div>`;
-  document.getElementById('task-cal-btn').onclick = () => scheduleTask(_currentTask);
-  openModal('modal-task');
+      <button class="m-del" onclick="delMember('${escA(n)}')">✕</button>
+    </div>`).join('');
 }
+function updEmail(name,email){const p=getActive();if(p)p.members[name]=email;}
+function delMember(name){const p=getActive();if(!p)return;delete p.members[name];renderMembers(p);}
+function addMember(){
+  const name=document.getElementById('add-m-name').value.trim();
+  const email=document.getElementById('add-m-email').value.trim();
+  if(!name){toast('Ingresa un nombre','⚠️');return;}
+  const p=getActive();if(!p)return;
+  p.members[name]=email;renderMembers(p);
+  document.getElementById('add-m-name').value='';document.getElementById('add-m-email').value='';
+}
+function saveSettings(){persist();closeModal('m-settings');const p=getActive();if(p)renderGantt(p);toast('Equipo guardado ✅');}
 
-// ══════════════════════════════════════════
-//  GOOGLE CALENDAR
-// ══════════════════════════════════════════
-async function scheduleTask(t) {
-  if (!state.accessToken) { toast('Inicia sesión primero', '⚠️'); return; }
-  const emails = t.email ? [t.email] : (state.user ? [state.user.email] : []);
-  if (!emails.length) { toast('Sin correo asignado', '⚠️'); return; }
-  
-  const date = t.date ? t.date.trim() : null;
-  if (!date) { toast('Sin fecha definida', '⚠️'); return; }
-  
-  // Parse date MM/DD/YYYY
-  const parts = date.split('/');
-  let startDate;
-  if (parts.length === 3) {
-    startDate = `${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`;
-  } else {
-    toast('Formato de fecha inválido', '⚠️'); return;
+// ══════════════════════════════
+// COLLABORATORS
+// ══════════════════════════════
+const APP_URL='https://promero-ucenfotec.github.io/Gestion-Proyectos-/';
+
+function openInviteModal(){
+  const p=getActive();if(!p)return;
+  renderCollabs(p);openModal('m-invite');
+}
+function renderCollabs(p){
+  const c=p.collaborators||[];
+  const link=`${APP_URL}?project=${p.id}`;
+  document.getElementById('collab-share-link').value=link;
+  document.getElementById('collab-list').innerHTML=c.length
+    ?c.map(e=>`<div class="collab-chip">
+        <div class="av" style="background:var(--accent2);color:#fff;font-size:.58rem;">${e.slice(0,2).toUpperCase()}</div>
+        <span style="flex:1">${esc(e)}</span>
+        <span style="font-size:.68rem;color:var(--text3);margin-right:4px;">${p.driveFileId?'✓ Drive':'sin Drive'}</span>
+        <button class="collab-del" onclick="removeCollab('${escA(e)}')">✕</button>
+      </div>`).join('')
+    :'<div style="color:var(--text3);font-size:.82rem;margin-bottom:8px;">Sin colaboradores aún.</div>';
+}
+async function addCollaborator(){
+  const email=document.getElementById('inv-email').value.trim();
+  if(!email||!email.includes('@')){toast('Correo inválido','⚠️');return;}
+  const p=getActive();if(!p)return;
+  if(!p.collaborators)p.collaborators=[];
+  if(p.collaborators.includes(email)){toast('Ya está en la lista','⚠️');return;}
+  p.collaborators.push(email);
+  document.getElementById('inv-email').value='';
+
+  // 1. Save project to Drive first (ensure file exists)
+  toast('Guardando proyecto en Drive…','☁️');
+  await saveProjectToDrive(p);
+
+  // 2. Share the Drive file with the collaborator
+  if(p.driveFileId&&S.token){
+    const ok=await shareDriveFile(p.driveFileId,email);
+    if(ok)toast(`Archivo Drive compartido con ${email} ✅`,'☁️');
+    else toast('No se pudo compartir en Drive (continúa con Calendar)','⚠️');
   }
 
-  const event = {
-    summary: `📋 ${t.task} — ${t.person}`,
-    description: `Tarea asignada a ${t.person}\nProyecto: ${getActive()?.name || ''}`,
-    start: { date: startDate },
-    end:   { date: startDate },
-    attendees: emails.map(e => ({ email: e })),
-    reminders: { useDefault: false, overrides: [{ method: 'email', minutes: 1440 }, { method: 'popup', minutes: 60 }] }
+  // 3. Send Calendar invite with the deep link
+  renderCollabs(p);
+  await persist();
+  if(S.token) await sendCalendarInvite(email,p);
+  toast(`Invitación enviada a ${email} 📨`);
+}
+function removeCollab(email){
+  const p=getActive();if(!p)return;
+  p.collaborators=(p.collaborators||[]).filter(e=>e!==email);
+  renderCollabs(p);persist();
+}
+async function shareDriveFile(fileId,email){
+  if(!S.token)return false;
+  try{
+    const r=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions?sendNotificationEmail=false`,{
+      method:'POST',
+      headers:{Authorization:'Bearer '+S.token,'Content-Type':'application/json'},
+      body:JSON.stringify({type:'user',role:'writer',emailAddress:email})
+    });
+    return r.ok;
+  }catch(e){console.warn('Share failed',e);return false;}
+}
+async function sendCalendarInvite(email,p){
+  const link=`${APP_URL}?project=${p.id}`;
+  const event={
+    summary:`📌 Invitación: proyecto "${p.name}" en PlanOS`,
+    description:`Has sido invitado a colaborar en el proyecto "${p.name}".\n\nAbre el cronograma aquí:\n${link}\n\nNecesitás iniciar sesión con tu cuenta de Google para sincronizar los cambios.`,
+    start:{dateTime:new Date().toISOString(),timeZone:'America/Costa_Rica'},
+    end:{dateTime:new Date(Date.now()+1800000).toISOString(),timeZone:'America/Costa_Rica'},
+    attendees:[{email}],
+    description:`📋 Proyecto: ${p.name}\n🔗 Abrir cronograma: ${link}\n\nPara editar, inicia sesión con Google en la app.`,
   };
-
-  try {
-    const r = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=all', {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + state.accessToken, 'Content-Type': 'application/json' },
-      body: JSON.stringify(event)
-    });
-    if (r.ok) {
-      toast(`"${t.task}" agendado para ${t.person}`, '📅');
-      closeModal('modal-task');
-    } else {
-      const err = await r.json();
-      toast('Error: ' + (err.error?.message || 'desconocido'), '❌');
-    }
-  } catch(e) { toast('Error de red', '❌'); }
+  try{
+    await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=all',
+      {method:'POST',headers:{Authorization:'Bearer '+S.token,'Content-Type':'application/json'},body:JSON.stringify(event)});
+  }catch(e){console.warn('Calendar invite failed',e);}
+}
+function copyShareLink(){
+  const v=document.getElementById('collab-share-link').value;
+  navigator.clipboard.writeText(v).then(()=>toast('Enlace copiado ✅')).catch(()=>{
+    document.getElementById('collab-share-link').select();document.execCommand('copy');toast('Enlace copiado ✅');
+  });
 }
 
-async function scheduleAllToCalendar() {
-  if (!state.accessToken) { toast('Inicia sesión primero', '⚠️'); return; }
-  const p = getActive(); if (!p) return;
-  const people = getPersonList(p);
-  let count = 0, errors = 0;
-  toast('Agendando tareas... ⏳', '📅');
-
-  for (const w of p.weeks) {
-    for (const person of people) {
-      const task = w.tasks[person];
-      if (!task) continue;
-      const email = (p.members[person] || state.user?.email || '');
-      if (!email) continue;
-      await scheduleTask({ person, task, week: w.week, date: w.date, email, color: '' });
-      count++;
-      await sleep(300); // rate limit
+// ══════════════════════════════
+// GOOGLE CALENDAR
+// ══════════════════════════════
+async function scheduleOne(t){
+  if(!S.token){toast('Inicia sesión primero','⚠️');return;}
+  const email=t.email||(S.user?.email||'');
+  if(!email){toast('Sin correo asignado. Configura el equipo primero.','⚠️');return;}
+  const iso=toISO(t.date);if(!iso){toast('Fecha inválida','⚠️');return;}
+  const event={
+    summary:`📋 ${t.task} — ${t.person}`,
+    description:`Tarea: ${t.task}\nResponsable: ${t.person}\nProyecto: ${getActive()?.name||''}`,
+    start:{date:iso},end:{date:iso},
+    attendees:[{email}],
+    reminders:{useDefault:false,overrides:[{method:'email',minutes:1440},{method:'popup',minutes:60}]}
+  };
+  const r=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=all',
+    {method:'POST',headers:{Authorization:'Bearer '+S.token,'Content-Type':'application/json'},body:JSON.stringify(event)}).catch(()=>null);
+  if(r?.ok){toast(`Agendado: ${t.task} 📅`);closeModal('m-task');}
+  else toast('Error al agendar','❌');
+}
+async function scheduleAll(){
+  if(!S.token){toast('Inicia sesión primero','⚠️');return;}
+  const p=getActive();if(!p)return;
+  const ppl=people(p);let count=0;
+  toast('Agendando todas las tareas… ⏳');
+  for(const w of p.weeks){
+    for(const person of ppl){
+      const task=w.tasks[person];if(!task?.label)continue;
+      const email=(p.members[person]||S.user?.email||'');if(!email)continue;
+      await scheduleOne({person,task:task.label,week:w.week,date:w.date,email});
+      count++;await sleep(280);
     }
   }
-  toast(`${count} tareas agendadas en Calendar`, '✅');
+  toast(`${count} tareas agendadas ✅`);
 }
 
-// ══════════════════════════════════════════
-//  GOOGLE DRIVE BACKUP
-// ══════════════════════════════════════════
-async function saveState() {
+// ══════════════════════════════
+// DRIVE — carpeta PlanOS/ + un archivo por proyecto
+// ══════════════════════════════
+
+// persist: saves locally + updates Drive file for the active project (or all)
+async function persist(){
   saveLocal();
-  if (state.accessToken) await saveToDrive();
+  if(S.token){
+    const p=getActive();
+    if(p) saveProjectToDrive(p);   // fire & forget, only active project
+  }
 }
 
-function saveLocal() {
-  try {
-    localStorage.setItem('planos_state', JSON.stringify({ projects: state.projects, driveBackupFileId: state.driveBackupFileId }));
-  } catch(e) {}
+function saveLocal(){
+  try{localStorage.setItem('planos_v3',JSON.stringify({projects:S.projects,driveFolderId:S.driveFolderId}));}catch(e){}
 }
-
-function loadLocal() {
-  try {
-    const s = JSON.parse(localStorage.getItem('planos_state') || '{}');
-    if (s.projects) state.projects = s.projects;
-    if (s.driveBackupFileId) state.driveBackupFileId = s.driveBackupFileId;
-  } catch(e) {}
+function loadLocal(){
+  try{
+    const d=JSON.parse(localStorage.getItem('planos_v3')||'{}');
+    if(d.projects)S.projects=d.projects;
+    if(d.driveFolderId)S.driveFolderId=d.driveFolderId;
+    migrate();
+  }catch(e){}
 }
-
-async function saveToDrive() {
-  if (!state.accessToken) return;
-  const payload = JSON.stringify({ projects: state.projects, savedAt: new Date().toISOString(), version: 2 }, null, 2);
-  const metadata = { name: 'PlanOS_Backup.json', mimeType: 'application/json', parents: state.driveBackupFileId ? undefined : ['root'] };
-  try {
-    let r;
-    if (state.driveBackupFileId) {
-      // Update existing
-      r = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${state.driveBackupFileId}?uploadType=multipart`, {
-        method: 'PATCH',
-        headers: { Authorization: 'Bearer ' + state.accessToken, 'Content-Type': 'multipart/related; boundary=bound' },
-        body: `--bound\r\nContent-Type: application/json\r\n\r\n${JSON.stringify({name:'PlanOS_Backup.json'})}\r\n--bound\r\nContent-Type: application/json\r\n\r\n${payload}\r\n--bound--`
+function migrate(){
+  S.projects.forEach(p=>{
+    if(!p.collaborators)p.collaborators=[];
+    if(!p.driveFileId)p.driveFileId=null;
+    p.weeks.forEach(w=>{
+      Object.keys(w.tasks).forEach(k=>{
+        if(typeof w.tasks[k]==='string')w.tasks[k]={label:w.tasks[k],subtasks:[]};
+        if(!w.tasks[k].subtasks)w.tasks[k].subtasks=[];
       });
-    } else {
-      // Create new
-      r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-        method: 'POST',
-        headers: { Authorization: 'Bearer ' + state.accessToken, 'Content-Type': 'multipart/related; boundary=bound' },
-        body: `--bound\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(metadata)}\r\n--bound\r\nContent-Type: application/json\r\n\r\n${payload}\r\n--bound--`
-      });
-      if (r.ok) {
-        const data = await r.json();
-        state.driveBackupFileId = data.id;
-        saveLocal();
-      }
-    }
-    if (r.ok) console.log('✅ Drive backup saved');
-  } catch(e) { console.warn('Drive backup failed:', e); }
-}
-
-async function loadFromDrive() {
-  if (!state.accessToken) return;
-  try {
-    // Search for backup file
-    const r = await fetch("https://www.googleapis.com/drive/v3/files?q=name='PlanOS_Backup.json'&spaces=drive&fields=files(id,name,modifiedTime)", {
-      headers: { Authorization: 'Bearer ' + state.accessToken }
     });
-    const data = await r.json();
-    if (data.files && data.files.length > 0) {
-      const file = data.files[0];
-      state.driveBackupFileId = file.id;
-      // Download content
-      const r2 = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, {
-        headers: { Authorization: 'Bearer ' + state.accessToken }
-      });
-      const backup = await r2.json();
-      if (backup.projects && backup.projects.length > 0) {
-        state.projects = backup.projects;
-        saveLocal();
-        toast(`Proyectos restaurados desde Drive (${backup.projects.length})`, '☁️');
+  });
+}
+
+// Ensure PlanOS folder exists; returns folderId
+async function ensureFolder(){
+  if(S.driveFolderId)return S.driveFolderId;
+  // Search
+  const r=await fetch("https://www.googleapis.com/drive/v3/files?q=name='PlanOS' and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id)",
+    {headers:{Authorization:'Bearer '+S.token}}).catch(()=>null);
+  if(r?.ok){
+    const d=await r.json();
+    if(d.files?.length){S.driveFolderId=d.files[0].id;saveLocal();return S.driveFolderId;}
+  }
+  // Create
+  const c=await fetch('https://www.googleapis.com/drive/v3/files',{
+    method:'POST',headers:{Authorization:'Bearer '+S.token,'Content-Type':'application/json'},
+    body:JSON.stringify({name:'PlanOS',mimeType:'application/vnd.google-apps.folder'})
+  }).catch(()=>null);
+  if(c?.ok){const d=await c.json();S.driveFolderId=d.id;saveLocal();return S.driveFolderId;}
+  return null;
+}
+
+// Save a single project to its own Drive file inside PlanOS/
+async function saveProjectToDrive(p){
+  if(!S.token)return;
+  try{
+    const folderId=await ensureFolder();
+    const payload=JSON.stringify({project:p,savedAt:new Date().toISOString(),v:4},null,2);
+    const fname=`planos_${p.id}.json`;
+    const meta=p.driveFileId?{name:fname}:{name:fname,mimeType:'application/json',parents:folderId?[folderId]:[]};
+    const body=`--b\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(meta)}\r\n--b\r\nContent-Type: application/json\r\n\r\n${payload}\r\n--b--`;
+    const hdr={Authorization:'Bearer '+S.token,'Content-Type':'multipart/related; boundary=b'};
+    let r;
+    if(p.driveFileId){
+      r=await fetch(`https://www.googleapis.com/upload/drive/v3/files/${p.driveFileId}?uploadType=multipart`,{method:'PATCH',headers:hdr,body});
+    } else {
+      r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:hdr,body});
+      if(r?.ok){const d=await r.json();p.driveFileId=d.id;saveLocal();}
+    }
+  }catch(e){console.warn('Drive save failed',e);}
+}
+
+// Load all projects: own projects from PlanOS/ folder + shared projects from ?project= URL param
+async function loadDrive(){
+  if(!S.token)return;
+  try{
+    // 1. Load own projects from PlanOS/ folder
+    const folderId=await ensureFolder();
+    if(folderId){
+      const r=await fetch(`https://www.googleapis.com/drive/v3/files?q='${folderId}' in parents and name contains 'planos_' and trashed=false&fields=files(id,name,modifiedTime)`,
+        {headers:{Authorization:'Bearer '+S.token}});
+      const d=await r.json();
+      if(d.files?.length){
+        let loaded=0;
+        for(const f of d.files){
+          const r2=await fetch(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media`,{headers:{Authorization:'Bearer '+S.token}});
+          const bk=await r2.json();
+          if(bk.project){
+            bk.project.driveFileId=f.id;
+            const existing=S.projects.findIndex(p=>p.id===bk.project.id);
+            if(existing>=0)S.projects[existing]=bk.project;
+            else S.projects.push(bk.project);
+            loaded++;
+          }
+          // Legacy v3 format (all projects in one file)
+          if(bk.projects){
+            bk.projects.forEach(p=>{const i=S.projects.findIndex(x=>x.id===p.id);if(i>=0)S.projects[i]=p;else S.projects.push(p);loaded++;});
+          }
+        }
+        migrate();saveLocal();
+        if(loaded)toast(`${loaded} proyectos desde Drive ☁️`);
       }
     }
-  } catch(e) { console.warn('Could not load from Drive:', e); }
+
+    // 2. Load shared project from URL ?project=ID
+    await loadSharedProject();
+
+  }catch(e){console.warn('Drive load failed',e);}
 }
 
-// ══════════════════════════════════════════
-//  UTILS
-// ══════════════════════════════════════════
-function uid() { return Math.random().toString(36).slice(2,10); }
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-function getActive() { return state.projects.find(p => p.id === state.activeProject); }
-function initials(name) { return name.split(/[\s-]+/).map(w=>w[0]).join('').toUpperCase().slice(0,2); }
-function escAttr(s) { return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
-function stringColor(s) {
-  let h = 0; for (let c of s) h = (h * 31 + c.charCodeAt(0)) % PERSON_COLORS.length;
-  return PERSON_COLORS[h];
-}
-function formatDate(d) {
-  if (!d) return '';
-  const parts = d.split('/');
-  if (parts.length === 3) return `${parts[1]}/${parts[0]}/${parts[2].slice(2)}`;
-  return d;
-}
-function formatDateFull(d) {
-  if (!d) return 'Sin fecha';
-  try {
-    const parts = d.split('/');
-    if (parts.length === 3) {
-      const dt = new Date(`${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`);
-      return dt.toLocaleDateString('es-CR', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+// Deep-link: ?project=ID — load that project file from Drive (shared with this user)
+async function loadSharedProject(){
+  const params=new URLSearchParams(location.search);
+  const pid=params.get('project');
+  if(!pid)return;
+  // Already loaded?
+  if(S.projects.find(p=>p.id===pid))return;
+  // Search Drive for planos_{pid}.json (the owner shared it with us)
+  try{
+    const r=await fetch(`https://www.googleapis.com/drive/v3/files?q=name='planos_${pid}.json' and trashed=false&fields=files(id,name)&spaces=drive`,
+      {headers:{Authorization:'Bearer '+S.token}});
+    const d=await r.json();
+    if(d.files?.length){
+      const fid=d.files[0].id;
+      const r2=await fetch(`https://www.googleapis.com/drive/v3/files/${fid}?alt=media`,{headers:{Authorization:'Bearer '+S.token}});
+      const bk=await r2.json();
+      if(bk.project){
+        bk.project.driveFileId=fid;
+        const existing=S.projects.findIndex(p=>p.id===bk.project.id);
+        if(existing>=0)S.projects[existing]=bk.project;
+        else S.projects.push(bk.project);
+        migrate();saveLocal();
+        toast(`Proyecto compartido cargado: ${bk.project.name} ☁️`);
+        // Auto-open if it's the only param
+        setTimeout(()=>showProject(bk.project.id),600);
+      }
+    } else {
+      toast('No se encontró el proyecto compartido. Pedí al dueño que lo comparta en Drive.','⚠️');
     }
-  } catch(e) {}
-  return d;
+  }catch(e){console.warn('Shared project load failed',e);}
 }
 
-let _toastTimer;
-function toast(msg, icon='✓') {
-  const el = document.getElementById('toast');
-  document.getElementById('toast-msg').textContent = msg;
-  el.querySelector('.t-icon').textContent = icon;
-  el.classList.add('show');
-  clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+// ══════════════════════════════
+// UTILS
+// ══════════════════════════════
+function uid(){return Math.random().toString(36).slice(2,10);}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function getActive(){return S.projects.find(p=>p.id===S.active);}
+function proj(id){return S.projects.find(p=>p.id===id);}
+function ini(n){return n.split(/[\s\-–]+/).map(w=>w[0]||'').join('').toUpperCase().slice(0,2);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escA(s){return String(s||'').replace(/'/g,"\\'")}
+function pCol(n){let h=0;for(const c of n)h=(h*31+c.charCodeAt(0))%PC.length;return PC[h];}
+function toD(str){
+  if(!str)return new Date(0);
+  const p=str.split('/');
+  if(p.length===3)return new Date(`${p[2]}-${p[0].padStart(2,'0')}-${p[1].padStart(2,'0')}T12:00:00`);
+  if(str.includes('-'))return new Date(str+'T12:00:00');
+  return new Date(0);
 }
+function fromD(d){return`${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}`;}
+function toISO(str){const p=str?.split('/');return p?.length===3?`${p[2]}-${p[0].padStart(2,'0')}-${p[1].padStart(2,'0')}`:null;}
+function toInputDate(str){const iso=toISO(str);return iso||'';}
+function fmtS(d){
+  if(!d)return'—';
+  try{return toD(d).toLocaleDateString('es-CR',{day:'numeric',month:'short'});}catch(e){return d;}
+}
+function fmtF(d){
+  if(!d)return'Sin fecha';
+  try{return toD(d).toLocaleDateString('es-CR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});}catch(e){return d;}
+}
+let _tt;
+function toast(msg,icon=''){
+  document.getElementById('t-msg').textContent=msg;
+  document.getElementById('t-icon').textContent=icon;
+  const el=document.getElementById('toast');el.classList.add('show');
+  clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),3600);
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden&&S.token){
+    // Save all projects that have unsaved changes
+    S.projects.forEach(p=>saveProjectToDrive(p));
+  }
+});
 
-// ══════════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════════
+// ══════════════════════════════
+// BOOT
+// ══════════════════════════════
 loadLocal();
-// Auto-save on visibility change
-document.addEventListener('visibilitychange', () => { if (document.hidden && state.user) saveToDrive(); });
+// If there's a ?project= param and user is not logged in yet, show login splash with note
+(()=>{
+  const pid=new URLSearchParams(location.search).get('project');
+  if(pid&&!S.user){
+    document.querySelector('#splash p').textContent='Inicia sesión con Google para acceder al proyecto compartido contigo.';
+  }
+})();
 </script>
 </body>
 </html>
